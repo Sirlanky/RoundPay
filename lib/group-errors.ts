@@ -11,6 +11,8 @@ export function messageFromGroupError(e: unknown): string {
   }
   if (msg.includes('already in this group')) return 'You are already in this group.';
   if (msg.includes('Group is full')) return 'This group is full.';
+  if (msg.includes('at least 2 members')) return 'You need at least 2 members before starting.';
+  if (msg.includes('cannot be started')) return 'This group cannot be started in its current state.';
   if (msg.includes('JWT') || msg.includes('not authenticated') || err.code === 'PGRST301') {
     return 'Sign in required. Leave build mode and sign in to save.';
   }
