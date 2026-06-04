@@ -40,3 +40,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Prisma (generated client — dev only, not used in Expo bundle)
+/generated

@@ -23,7 +23,17 @@ for (const [name, re] of Object.entries(vars)) {
     !val ||
     val.includes('your-project') ||
     val.includes('your-anon') ||
+    val.includes('your-anon-or-publishable') ||
     val.includes('xxxxxxxx');
+  const supabaseKeyOk =
+    name !== 'EXPO_PUBLIC_SUPABASE_ANON_KEY' ||
+    val.startsWith('eyJ') ||
+    val.startsWith('sb_publishable_');
+  if (name === 'EXPO_PUBLIC_SUPABASE_ANON_KEY' && !placeholder && !supabaseKeyOk) {
+    console.error(`❌ ${name} must be anon (eyJ...) or publishable (sb_publishable_...) key`);
+    ok = false;
+    continue;
+  }
   if (placeholder) {
     console.error(`❌ ${name} not configured`);
     ok = false;
