@@ -14,10 +14,12 @@ Follow these steps once. Takes about 10 minutes.
 
 ## Step 2 — Copy API keys into `.env`
 
+> **Expo note:** This app is **React Native (Expo)**, not Next.js. Do **not** install `@supabase/ssr` or add `middleware.ts` / `utils/supabase/server.ts` from the Next.js guide. Use `.env` with `EXPO_PUBLIC_*` variables only.
+
 1. In the dashboard, go to **Project Settings** (gear) → **API**.
 2. Copy:
    - **Project URL** → `EXPO_PUBLIC_SUPABASE_URL`
-   - **anon public** key → `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+   - **anon public** or **publishable** key → `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 3. In the project folder, edit `.env`:
 
 ```env
