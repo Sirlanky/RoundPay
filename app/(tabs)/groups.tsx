@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { GroupCard } from '@/components/GroupCard';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { EmptyState } from '@/components/EmptyState';
-import { useColorScheme } from '@/components/useColorScheme';
+import { GroupCard } from '@/components/GroupCard';
+import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors, { brand } from '@/constants/Colors';
 import { getUserGroups } from '@/lib/groups';
 import type { AjoGroup } from '@/lib/types';
+import { useColorScheme } from '@/components/useColorScheme';
 
 export default function GroupsScreen() {
   const { user } = useAuth();
@@ -34,39 +35,30 @@ export default function GroupsScreen() {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={brand.primary} />
+        <ActivityIndicator color={brand.primary} size="large" />
       </View>
     );
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={async () => {
-            setRefreshing(true);
-            await load();
-            setRefreshing(false);
-          }}
-          tintColor={brand.primary}
-        />
-      }>
-      <Text style={[styles.title, { color: colors.text }]}>All Groups</Text>
+    <Screen
+      refreshing={refreshing}
+      onRefresh={async () => {
+        setRefreshing(true);
+        await load();
+        setRefreshing(false);
+      }}
+      contentStyle={styles.content}>
       {groups.length === 0 ? (
         <EmptyState title="No groups" message="Create or join an Ajo group to get started." />
       ) : (
         groups.map((g) => <GroupCard key={g.id} group={g} />)
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: 20, paddingTop: 60 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 20 },
+  content: { paddingTop: 8 },
 });

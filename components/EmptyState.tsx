@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Colors from '@/constants/Colors';
+import { spacing } from '@/constants/theme';
 import { useColorScheme } from './useColorScheme';
 
 interface Props {
@@ -12,7 +13,7 @@ export function EmptyState({ title, message }: Props) {
   const colors = Colors[scheme];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
     </View>
@@ -20,7 +21,13 @@ export function EmptyState({ title, message }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: 'center', padding: 32 },
-  title: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
+  container: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  title: { fontSize: 17, fontWeight: '600', marginBottom: spacing.sm },
   message: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });

@@ -33,7 +33,7 @@ export function Input({ label, error, style, ...props }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginBottom: 14 },
+  wrap: { marginBottom: 12 },
   label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
   input: {
     borderWidth: 1,

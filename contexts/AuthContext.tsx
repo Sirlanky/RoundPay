@@ -55,7 +55,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (session?.user) {
-      refreshProfile().then(() => registerForPushNotifications());
+      refreshProfile().then(() => {
+        // Push registration can fail in Expo Go / simulator; don't block the app
+        registerForPushNotifications().catch(() => {});
+      });
     } else {
       setProfile(null);
     }
