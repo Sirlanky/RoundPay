@@ -1,16 +1,17 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Button } from '@/components/Button';
-import { useColorScheme } from '@/components/useColorScheme';
+import { Screen } from '@/components/Screen';
 import Colors, { brand } from '@/constants/Colors';
 import { createContributionPayment } from '@/lib/paystack';
+import { spacing } from '@/constants/theme';
+import { useColorScheme } from '@/components/useColorScheme';
 
 export default function PayScreen() {
   const { contributionId } = useLocalSearchParams<{ contributionId: string }>();
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(false);
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
@@ -30,38 +31,45 @@ export default function PayScreen() {
 
   const handleNavigationChange = (url: string) => {
     if (url.includes('payment-callback') || url.includes('ajoesusu://')) {
-      setLoading(true);
       Alert.alert('Payment submitted', 'We will confirm your payment shortly.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-      setLoading(false);
     }
   };
 
   if (paymentUrl) {
     return (
-      <WebView
-        source={{ uri: paymentUrl }}
-        onNavigationStateChange={(nav) => handleNavigationChange(nav.url)}
-        startInLoadingState
-        renderLoading={() => (
-          <View style={styles.loader}>
-            <ActivityIndicator color={brand.primary} size="large" />
-          </View>
-        )}
-      />
+      <View style={styles.webview}>
+        <WebView
+          source={{ uri: paymentUrl }}
+          onNavigationStateChange={(nav) => handleNavigationChange(nav.url)}
+          startInLoadingState
+          renderLoading={() => (
+            <View style={styles.loader}>
+              <ActivityIndicator color={brand.primary} size="large" />
+            </View>
+          )}
+        />
+      </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Button title="Pay with Paystack" onPress={startPayment} loading={initializing} />
+    <Screen contentStyle={styles.content}>
+      <Text style={[styles.title, { color: colors.text }]}>Pay with Paystack</Text>
+      <Text style={[styles.body, { color: colors.textSecondary }]}>
+        You will complete payment in a secure checkout. Use test card 4084084084084081 in sandbox mode.
+      </Text>
+      <Button title="Continue to payment" onPress={startPayment} loading={initializing} />
       <Button title="Cancel" onPress={() => router.back()} variant="secondary" />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center' },
+  content: { paddingTop: spacing.lg },
+  title: { fontSize: 20, fontWeight: '700', marginBottom: spacing.sm },
+  body: { fontSize: 15, lineHeight: 22, marginBottom: spacing.xl },
+  webview: { flex: 1 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

@@ -1,16 +1,20 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { AuthShell } from '@/components/AuthShell';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
-import { useColorScheme } from '@/components/useColorScheme';
 import Colors, { brand } from '@/constants/Colors';
+import { sendEmailOtp } from '@/lib/auth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { spacing } from '@/constants/theme';
+import { useColorScheme } from '@/components/useColorScheme';
 
 export default function VerifyOtpScreen() {
-  const { email, demo } = useLocalSearchParams<{ email: string; demo?: string }>();
+  const { email } = useLocalSearchParams<{ email: string }>();
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
@@ -18,17 +22,15 @@ export default function VerifyOtpScreen() {
 
   const handleVerify = async () => {
     if (!token.trim()) {
-      setError('Enter the code from your email');
+      setError('Enter the 6-digit code from your email');
+      return;
+    }
+    if (!isSupabaseConfigured) {
+      setError('Configure Supabase in .env first.');
       return;
     }
     setError('');
     setLoading(true);
-
-    if (demo === '1' || !isSupabaseConfigured) {
-      setLoading(false);
-      setError('Configure Supabase in .env to enable authentication.');
-      return;
-    }
 
     const { error: authError } = await supabase.auth.verifyOtp({
       email: email ?? '',
@@ -44,15 +46,24 @@ export default function VerifyOtpScreen() {
     router.replace('/(tabs)');
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Verify your email</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Enter the 6-digit code sent to {email}
-      </Text>
+  const handleResend = async () => {
+    if (!email || !isSupabaseConfigured) return;
+    setResending(true);
+    setError('');
+    const { error: authError } = await sendEmailOtp(email);
+    setResending(false);
+    if (authError) setError(authError.message);
+    else setError('');
+  };
 
+  return (
+    <AuthShell title="Check your email" subtitle={`We sent a sign-in message to ${email ?? 'your inbox'}`}>
+      <Text style={[styles.help, { color: colors.textSecondary }]}>
+        If your email has a 6-digit code, enter it below. If it has a “Sign in” link, tap that link instead (it opens
+        this app).
+      </Text>
       <Input
-        label="Verification code"
+        label="6-digit code (if shown in email)"
         placeholder="123456"
         value={token}
         onChangeText={setToken}
@@ -60,19 +71,22 @@ export default function VerifyOtpScreen() {
         maxLength={8}
         error={error}
       />
-
-      <Button title="Verify & continue" onPress={handleVerify} loading={loading} />
-
-      <Pressable onPress={() => router.back()}>
-        <Text style={[styles.resend, { color: brand.primary }]}>Use a different email</Text>
+      <Button title="Verify code" onPress={handleVerify} loading={loading} />
+      <Button title="Resend email" onPress={handleResend} loading={resending} variant="secondary" />
+      <Pressable onPress={() => router.back()} style={styles.back}>
+        <Text style={{ color: brand.primary, fontWeight: '600' }}>Use a different email</Text>
       </Pressable>
-    </View>
+      <Text style={[styles.tip, { color: colors.textSecondary }]}>
+        No email? Check spam. In Supabase: Authentication → Email Templates → Magic Link must include{' '}
+        <Text style={styles.mono}>{'{{ .Token }}'}</Text> for a code.
+      </Text>
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, paddingTop: 80 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 8 },
-  subtitle: { fontSize: 15, marginBottom: 32, lineHeight: 22 },
-  resend: { fontSize: 15, textAlign: 'center', marginTop: 24 },
+  help: { fontSize: 14, lineHeight: 20, marginBottom: spacing.md },
+  back: { alignItems: 'center', marginTop: spacing.md },
+  tip: { fontSize: 12, lineHeight: 18, marginTop: spacing.lg, textAlign: 'center' },
+  mono: { fontFamily: 'SpaceMono', fontSize: 11 },
 });

@@ -1,14 +1,17 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
 import { Input } from '@/components/Input';
-import { useColorScheme } from '@/components/useColorScheme';
+import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors, { brand } from '@/constants/Colors';
 import { NIGERIAN_BANKS } from '@/constants/banks';
 import { getFunctionsUrl, supabase } from '@/lib/supabase';
 import { resolveBankAccount } from '@/lib/paystack';
+import { spacing } from '@/constants/theme';
+import { useColorScheme } from '@/components/useColorScheme';
 
 export default function BankScreen() {
   const { refreshProfile } = useAuth();
@@ -25,7 +28,7 @@ export default function BankScreen() {
 
   const handleResolve = async () => {
     if (!accountNumber || !bankCode) {
-      Alert.alert('Error', 'Select a bank and enter account number');
+      Alert.alert('Missing info', 'Select a bank and enter your account number.');
       return;
     }
     setLoading(true);
@@ -40,7 +43,7 @@ export default function BankScreen() {
 
   const handleSave = async () => {
     if (!accountName) {
-      Alert.alert('Error', 'Resolve your account first');
+      Alert.alert('Verify first', 'Tap verify account before saving.');
       return;
     }
     setSaving(true);
@@ -51,10 +54,7 @@ export default function BankScreen() {
 
       const res = await fetch(getFunctionsUrl('save-bank-account'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           account_number: accountNumber,
           bank_code: bankCode,
@@ -75,11 +75,15 @@ export default function BankScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
+    <Screen keyboard contentStyle={styles.content}>
+      <Text style={[styles.hint, { color: colors.textSecondary }]}>
+        We use Paystack to verify your account and send payouts when it is your turn to collect.
+      </Text>
+
       <Pressable
         style={[styles.picker, { backgroundColor: colors.card, borderColor: colors.border }]}
         onPress={() => setPickerOpen(true)}>
-        <Text style={{ color: bankName ? colors.text : colors.textSecondary }}>
+        <Text style={{ color: bankName ? colors.text : colors.textSecondary, fontSize: 16 }}>
           {bankName || 'Select bank'}
         </Text>
       </Pressable>
@@ -95,44 +99,66 @@ export default function BankScreen() {
       <Button title="Verify account" onPress={handleResolve} loading={loading} variant="secondary" />
 
       {accountName ? (
-        <View style={[styles.verified, { backgroundColor: brand.primary + '18' }]}>
-          <Text style={{ color: brand.primary, fontWeight: '600' }}>{accountName}</Text>
-        </View>
+        <Card style={{ marginTop: spacing.sm }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Account name</Text>
+          <Text style={{ color: brand.primary, fontWeight: '600', fontSize: 16, marginTop: 4 }}>
+            {accountName}
+          </Text>
+        </Card>
       ) : null}
 
       <Button title="Save bank account" onPress={handleSave} loading={saving} disabled={!accountName} />
 
-      <Modal visible={pickerOpen} animationType="slide">
-        <View style={[styles.modal, { backgroundColor: colors.background }]}>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>Select Bank</Text>
-          <FlatList
-            data={NIGERIAN_BANKS}
-            keyExtractor={(item) => item.code}
-            renderItem={({ item }) => (
-              <Pressable
-                style={[styles.bankItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setBankCode(item.code);
-                  setBankName(item.name);
-                  setPickerOpen(false);
-                }}>
-                <Text style={{ color: colors.text }}>{item.name}</Text>
-              </Pressable>
-            )}
-          />
-          <Button title="Cancel" onPress={() => setPickerOpen(false)} variant="secondary" />
-        </View>
+      <Modal visible={pickerOpen} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaBankPicker
+          colors={colors}
+          onSelect={(code, name) => {
+            setBankCode(code);
+            setBankName(name);
+            setPickerOpen(false);
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
       </Modal>
-    </ScrollView>
+    </Screen>
+  );
+}
+
+function SafeAreaBankPicker({
+  colors,
+  onSelect,
+  onClose,
+}: {
+  colors: (typeof Colors)['light'];
+  onSelect: (code: string, name: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <View style={[styles.modal, { backgroundColor: colors.background }]}>
+      <Text style={[styles.modalTitle, { color: colors.text }]}>Select bank</Text>
+      <FlatList
+        data={NIGERIAN_BANKS}
+        keyExtractor={(item) => item.code}
+        renderItem={({ item }) => (
+          <Pressable
+            style={[styles.bankItem, { borderBottomColor: colors.border }]}
+            onPress={() => onSelect(item.code, item.name)}>
+            <Text style={{ color: colors.text, fontSize: 16 }}>{item.name}</Text>
+          </Pressable>
+        )}
+      />
+      <View style={{ padding: spacing.lg }}>
+        <Button title="Cancel" onPress={onClose} variant="secondary" />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: 20 },
-  picker: { borderWidth: 1, borderRadius: 10, padding: 14, marginBottom: 14 },
-  verified: { padding: 14, borderRadius: 10, marginBottom: 16 },
-  modal: { flex: 1, paddingTop: 60 },
-  modalTitle: { fontSize: 20, fontWeight: '700', padding: 20 },
-  bankItem: { padding: 16, borderBottomWidth: 1 },
+  content: { paddingTop: spacing.sm },
+  hint: { fontSize: 14, lineHeight: 20, marginBottom: spacing.lg },
+  picker: { borderWidth: 1, borderRadius: 10, padding: 14, marginBottom: spacing.md },
+  modal: { flex: 1, paddingTop: 56 },
+  modalTitle: { fontSize: 20, fontWeight: '700', paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
+  bankItem: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderBottomWidth: 1 },
 });

@@ -1,8 +1,32 @@
+# Supabase local / CLI config — see docs/SUPABASE_SETUP.md
+
+project_id = "roundpay"
+
 [api]
 enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
 [db]
+port = 54322
+shadow_port = 54320
 major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "ajoesusu://"
+additional_redirect_urls = ["ajoesusu://**", "exp://**"]
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = false
+enable_confirmations = false
 
 [functions.paystack-webhook]
 verify_jwt = false

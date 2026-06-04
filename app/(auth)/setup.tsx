@@ -1,43 +1,59 @@
-import { Link } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import Colors, { brand } from '@/constants/Colors';
+import * as WebBrowser from 'expo-web-browser';
+import { useRouter } from 'expo-router';
+import { StyleSheet, Text } from 'react-native';
+import { AuthShell } from '@/components/AuthShell';
+import { Button } from '@/components/Button';
 import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
+import { spacing } from '@/constants/theme';
 
 export default function SetupScreen() {
+  const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
-      <Text style={[styles.logo, { color: brand.primary }]}>Ajo Esusu</Text>
-      <Text style={[styles.title, { color: colors.text }]}>Setup required</Text>
-      <Text style={[styles.body, { color: colors.textSecondary }]}>
-        Copy `.env.example` to `.env` and add your Supabase URL, anon key, and Paystack public key.
+    <AuthShell
+      title="Connect Supabase"
+      subtitle="Create a free project, then paste keys into .env in the project folder.">
+      <Text style={[styles.step, { color: colors.text }]}>
+        1. Create a project at supabase.com (name: RoundPay)
       </Text>
-      <View style={[styles.code, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.codeText, { color: colors.text }]}>
-          EXPO_PUBLIC_SUPABASE_URL{'\n'}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY{'\n'}
-          EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY
-        </Text>
-      </View>
-      <Text style={[styles.body, { color: colors.textSecondary }]}>
-        Run the SQL migration in `supabase/migrations/001_schema.sql` in your Supabase SQL editor, then deploy Edge Functions.
+      <Button
+        title="Open Supabase dashboard"
+        onPress={() => WebBrowser.openBrowserAsync('https://supabase.com/dashboard/new')}
+        variant="secondary"
+      />
+      <Text style={[styles.step, { color: colors.text }]}>
+        2. Copy Project URL + anon key into <Text style={styles.mono}>.env</Text>
       </Text>
-      <Link href="/(auth)/login" style={[styles.link, { color: brand.primary }]}>
-        Continue to login (demo mode)
-      </Link>
-    </ScrollView>
+      <Text style={[styles.code, { color: colors.text, backgroundColor: colors.background }]}>
+        EXPO_PUBLIC_SUPABASE_URL=…{'\n'}
+        EXPO_PUBLIC_SUPABASE_ANON_KEY=…
+      </Text>
+      <Text style={[styles.step, { color: colors.text }]}>
+        3. SQL Editor → run <Text style={styles.mono}>supabase/migrations/001_schema.sql</Text>
+      </Text>
+      <Text style={[styles.step, { color: colors.text }]}>
+        4. Authentication → enable Email provider
+      </Text>
+      <Text style={[styles.step, { color: colors.textSecondary, fontSize: 13 }]}>
+        Full guide: docs/SUPABASE_SETUP.md — then restart with npx expo start --clear
+      </Text>
+      <Button title="I added keys — reload app" onPress={() => router.replace('/(auth)/login')} />
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: 24, paddingTop: 80 },
-  logo: { fontSize: 32, fontWeight: '800', marginBottom: 24 },
-  title: { fontSize: 22, fontWeight: '600', marginBottom: 12 },
-  body: { fontSize: 15, lineHeight: 22, marginBottom: 16 },
-  code: { borderRadius: 10, padding: 16, borderWidth: 1, marginBottom: 16 },
-  codeText: { fontFamily: 'SpaceMono', fontSize: 13, lineHeight: 20 },
-  link: { fontSize: 16, fontWeight: '600', marginTop: 24 },
+  step: { fontSize: 15, lineHeight: 22, marginBottom: spacing.sm },
+  mono: { fontFamily: 'SpaceMono', fontSize: 13 },
+  code: {
+    fontFamily: 'SpaceMono',
+    fontSize: 12,
+    lineHeight: 18,
+    padding: spacing.md,
+    borderRadius: 8,
+    marginBottom: spacing.md,
+  },
 });

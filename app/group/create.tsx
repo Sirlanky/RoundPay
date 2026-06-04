@@ -1,13 +1,15 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
-import { useColorScheme } from '@/components/useColorScheme';
+import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors, { brand } from '@/constants/Colors';
 import { createGroup } from '@/lib/groups';
 import type { GroupFrequency } from '@/lib/types';
+import { spacing } from '@/constants/theme';
+import { useColorScheme } from '@/components/useColorScheme';
 
 export default function CreateGroupScreen() {
   const { user } = useAuth();
@@ -25,7 +27,7 @@ export default function CreateGroupScreen() {
     if (!user) return;
     const contributionAmount = parseInt(amount.replace(/\D/g, ''), 10);
     if (!name.trim() || !contributionAmount) {
-      Alert.alert('Error', 'Enter group name and contribution amount');
+      Alert.alert('Missing info', 'Enter a group name and contribution amount.');
       return;
     }
 
@@ -39,8 +41,8 @@ export default function CreateGroupScreen() {
         adminFeePercent: parseFloat(adminFee) || 0,
         adminId: user.id,
       });
-      Alert.alert('Group created', `Invite code: ${group.invite_code}`, [
-        { text: 'OK', onPress: () => router.replace(`/group/${group.id}`) },
+      Alert.alert('Group created', `Share invite code: ${group.invite_code}`, [
+        { text: 'Open group', onPress: () => router.replace(`/group/${group.id}`) },
       ]);
     } catch (e) {
       Alert.alert('Error', (e as Error).message);
@@ -49,10 +51,10 @@ export default function CreateGroupScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
-      <Input label="Group name" value={name} onChangeText={setName} placeholder="Family Ajo" />
+    <Screen keyboard contentStyle={styles.content}>
+      <Input label="Group name" value={name} onChangeText={setName} placeholder="e.g. Office Ajo" />
       <Input
-        label="Contribution amount (₦)"
+        label="Contribution (₦)"
         value={amount}
         onChangeText={setAmount}
         keyboardType="number-pad"
@@ -83,14 +85,13 @@ export default function CreateGroupScreen() {
       <Input label="Admin fee (%)" value={adminFee} onChangeText={setAdminFee} keyboardType="decimal-pad" />
 
       <Button title="Create group" onPress={handleCreate} loading={loading} />
-    </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: 20 },
-  label: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
-  row: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  content: { paddingTop: spacing.md },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: spacing.sm },
+  row: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   chip: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1.5 },
 });
