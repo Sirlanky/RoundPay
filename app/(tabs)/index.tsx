@@ -16,6 +16,7 @@ export default function HomeScreen() {
   const { user, profile } = useAuth();
   const [groups, setGroups] = useState<AjoGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
@@ -24,12 +25,20 @@ export default function HomeScreen() {
   const load = useCallback(async () => {
     if (!user) {
       setGroups([]);
+      setLoadError('');
       setLoading(false);
       return;
     }
-    const data = await getUserGroups(user.id);
-    setGroups(data as AjoGroup[]);
-    setLoading(false);
+    try {
+      setLoadError('');
+      const data = await getUserGroups(user.id);
+      setGroups(data as AjoGroup[]);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Could not load groups');
+      setGroups([]);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -49,6 +58,7 @@ export default function HomeScreen() {
 
   return (
     <Screen
+      safeArea={false}
       refreshing={refreshing}
       onRefresh={async () => {
         setRefreshing(true);
@@ -61,6 +71,10 @@ export default function HomeScreen() {
       <Text style={[styles.stats, { color: colors.textSecondary }]}>
         {activeGroups.length} active · {groups.length} total groups
       </Text>
+
+      {loadError ? (
+        <Text style={[styles.error, { color: colors.error }]}>{loadError}</Text>
+      ) : null}
 
       <View style={styles.actions}>
         <Button title="Create group" onPress={() => router.push('/group/create')} style={styles.actionBtn} />
@@ -86,6 +100,7 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 15 },
   name: { fontSize: 28, fontWeight: '800', marginTop: 2 },
   stats: { fontSize: 14, marginTop: spacing.xs, marginBottom: spacing.lg },
+  error: { fontSize: 14, marginBottom: spacing.md, lineHeight: 20 },
   actions: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   actionBtn: { flex: 1, marginVertical: 0 },
   section: { fontSize: 18, fontWeight: '600', marginBottom: spacing.md },

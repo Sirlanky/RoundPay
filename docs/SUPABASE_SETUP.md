@@ -35,9 +35,17 @@ EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_xxxxxxxx
 1. Go to **Authentication** → **Providers**.
 2. Enable **Email**.
 3. Under **Email**, turn off **Confirm email** for faster testing (optional).
-4. Go to **Authentication** → **URL configuration** and add to **Redirect URLs**:
-   - `ajoesusu://**`
-   - `exp://**` (for Expo Go)
+4. Go to **Authentication** → **URL configuration**:
+   - **Site URL:** `ajoesusu://` (production / dev build)
+   - **Redirect URLs** — add **all** of these:
+     - `ajoesusu://**`
+     - `exp://**` (Expo Go on device)
+     - `exp://127.0.0.1:8081/**` (iOS Simulator + Expo Go)
+     - `exp://localhost:8081/**` (optional)
+
+5. **Expo Go only:** After `npx expo start`, open the **Login** screen in the app. In development it shows the exact redirect URL (e.g. `exp://192.168.x.x:8081/--/auth/callback`). **Copy that line into Redirect URLs** in Supabase if email links open Safari and go nowhere.
+
+6. Restart Expo after changing `.env`: `npx expo start --clear`
 
 ### Important: send a 6-digit code (not only a link)
 
@@ -116,6 +124,9 @@ https://YOUR_PROJECT_REF.supabase.co/functions/v1/paystack-webhook
 |--------|-----|
 | App shows **Setup** screen | `.env` missing or still has `your-project` placeholder |
 | OTP email not received | Check spam; confirm Email provider is on; use Supabase Auth logs |
+| Email **link goes nowhere** | Add the `exp://…/auth/callback` URL from Login screen to Supabase redirect URLs; or use the **6-digit code** on Verify screen |
+| **email rate limit exceeded** | Supabase default email is ~2–4/hour. **Stop tapping Resend.** Wait **1 hour**. Use an old code from inbox/spam. For real testing: **Authentication → SMTP** (custom provider) or sign in with your **Supabase team email** only |
+| **Bank: Not authenticated** | You must **sign in** (not build mode). Deploy Edge Functions and set `PAYSTACK_SECRET_KEY` in Supabase secrets (see below) |
 | `relation does not exist` | Re-run `001_schema.sql` in SQL Editor |
 | Groups fail to create | Confirm you are logged in; check **Logs** → Postgres |
 

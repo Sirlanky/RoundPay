@@ -9,14 +9,16 @@ if (!fs.existsSync(envPath)) {
 }
 
 const env = fs.readFileSync(envPath, 'utf8');
-const vars = {
+const required = {
   EXPO_PUBLIC_SUPABASE_URL: /EXPO_PUBLIC_SUPABASE_URL=(.+)/,
   EXPO_PUBLIC_SUPABASE_ANON_KEY: /EXPO_PUBLIC_SUPABASE_ANON_KEY=(.+)/,
+};
+const optional = {
   EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY: /EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY=(.+)/,
 };
 
 let ok = true;
-for (const [name, re] of Object.entries(vars)) {
+for (const [name, re] of Object.entries(required)) {
   const m = env.match(re);
   const val = m?.[1]?.trim() ?? '';
   const placeholder =
@@ -42,8 +44,19 @@ for (const [name, re] of Object.entries(vars)) {
   }
 }
 
+for (const [name, re] of Object.entries(optional)) {
+  const m = env.match(re);
+  const val = m?.[1]?.trim() ?? '';
+  const placeholder = !val || val.includes('xxxxxxxx');
+  if (placeholder) {
+    console.log(`⚠️  ${name} not set (payments disabled until you add a Paystack test key)`);
+  } else {
+    console.log(`✅ ${name}`);
+  }
+}
+
 if (ok) {
-  console.log('\nEnvironment looks ready. Run: npx expo start --clear');
+  console.log('\nApp env looks ready. Run: npx expo start --clear');
 } else {
   console.log('\nSee docs/SUPABASE_SETUP.md for setup steps.');
   process.exit(1);

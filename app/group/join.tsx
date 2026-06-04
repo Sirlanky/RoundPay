@@ -1,19 +1,26 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
+import { AuthActionBanner } from '@/components/AuthActionBanner';
 import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { GroupJoinPreviewCard } from '@/components/GroupJoinPreviewCard';
 import { Input } from '@/components/Input';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
-import { joinGroup } from '@/lib/groups';
+import Colors from '@/constants/Colors';
+import { messageFromGroupError } from '@/lib/group-errors';
+import { isValidInviteCode } from '@/lib/group-validation';
+import { joinGroup, previewGroupByInviteCode, type GroupJoinPreview } from '@/lib/groups';
 import { spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
 
 export default function JoinGroupScreen() {
   const { user } = useAuth();
   const { code } = useLocalSearchParams<{ code?: string }>();
   const [inviteCode, setInviteCode] = useState(code?.toString().toUpperCase() ?? '');
+  const [preview, setPreview] = useState<GroupJoinPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
@@ -23,44 +30,87 @@ export default function JoinGroupScreen() {
     if (code) setInviteCode(code.toString().toUpperCase());
   }, [code]);
 
+  const loadPreview = useCallback(async (raw: string) => {
+    const normalized = raw.trim().toUpperCase();
+    if (!isValidInviteCode(normalized)) {
+      setPreview(null);
+      setPreviewLoading(false);
+      return;
+    }
+    setPreviewLoading(true);
+    const data = await previewGroupByInviteCode(normalized);
+    setPreview(data);
+    setPreviewLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => loadPreview(inviteCode), 400);
+    return () => clearTimeout(t);
+  }, [inviteCode, loadPreview]);
+
   const handleJoin = async () => {
-    if (!user) return;
-    if (!inviteCode.trim()) {
-      Alert.alert('Missing code', 'Enter the 6-character invite code.');
+    if (!user) {
+      Alert.alert('Sign in required', 'Leave build mode and sign in to join a group.');
+      return;
+    }
+    if (!isValidInviteCode(inviteCode)) {
+      Alert.alert('Invalid code', 'Invite codes are 6 characters (letters and numbers).');
+      return;
+    }
+    if (!preview) {
+      Alert.alert('Group not found', 'Check the code or ask your admin for a new one.');
+      return;
+    }
+    if (preview.member_count >= preview.max_members) {
+      Alert.alert('Group full', 'This group has no spots left.');
       return;
     }
 
     setLoading(true);
     try {
       const group = await joinGroup(inviteCode.trim(), user.id);
-      Alert.alert('Joined', `You joined ${group.name}`, [
-        { text: 'OK', onPress: () => router.replace(`/group/${group.id}`) },
-      ]);
+      router.replace(`/group/${group.id}`);
     } catch (e) {
-      Alert.alert('Error', (e as Error).message);
+      Alert.alert('Could not join', messageFromGroupError(e));
     }
     setLoading(false);
   };
 
+  const canJoin =
+    !!user &&
+    !!preview &&
+    preview.member_count < preview.max_members &&
+    isValidInviteCode(inviteCode);
+
   return (
-    <Screen keyboard contentStyle={styles.content}>
-      <Text style={[styles.hint, { color: colors.textSecondary }]}>
-        Ask your group admin for the invite code. Groups must still be in draft (not started).
+    <Screen keyboard safeArea={false} contentStyle={styles.content}>
+      <Text style={[styles.lead, { color: colors.textSecondary }]}>
+        Enter the 6-character code from your group admin. You can only join while the group is still in{' '}
+        <Text style={styles.em}>draft</Text> (before the first cycle starts).
       </Text>
-      <Input
-        label="Invite code"
-        value={inviteCode}
-        onChangeText={(t) => setInviteCode(t.toUpperCase())}
-        placeholder="ABC123"
-        autoCapitalize="characters"
-        maxLength={6}
-      />
-      <Button title="Join group" onPress={handleJoin} loading={loading} />
+
+      <AuthActionBanner action="join a group" />
+
+      <Card>
+        <Input
+          label="Invite code"
+          value={inviteCode}
+          onChangeText={(t) => setInviteCode(t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+          placeholder="ABC123"
+          autoCapitalize="characters"
+          maxLength={6}
+        />
+      </Card>
+
+      <GroupJoinPreviewCard preview={preview} loading={previewLoading} code={inviteCode} />
+
+      <Button title="Join group" onPress={handleJoin} loading={loading} disabled={!canJoin} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.md },
-  hint: { fontSize: 14, lineHeight: 20, marginBottom: spacing.lg },
+  content: { paddingTop: spacing.sm },
+  lead: { fontSize: 15, lineHeight: 22, marginBottom: spacing.md },
+  em: { fontWeight: '700', fontStyle: 'italic' },
 });

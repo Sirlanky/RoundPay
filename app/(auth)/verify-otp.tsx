@@ -1,10 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { AuthShell } from '@/components/AuthShell';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
-import Colors, { brand } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
 import { sendEmailOtp } from '@/lib/auth';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { spacing } from '@/constants/theme';
@@ -52,7 +52,14 @@ export default function VerifyOtpScreen() {
     setError('');
     const { error: authError } = await sendEmailOtp(email);
     setResending(false);
-    if (authError) setError(authError.message);
+    if (authError) {
+      const msg = authError.message;
+      setError(
+        /rate limit/i.test(msg)
+          ? 'Too many emails sent. Wait ~1 hour before resend. Use a code from an earlier email if you have one.'
+          : msg
+      );
+    }
     else setError('');
   };
 
@@ -73,9 +80,9 @@ export default function VerifyOtpScreen() {
       />
       <Button title="Verify code" onPress={handleVerify} loading={loading} />
       <Button title="Resend email" onPress={handleResend} loading={resending} variant="secondary" />
-      <Pressable onPress={() => router.back()} style={styles.back}>
-        <Text style={{ color: brand.primary, fontWeight: '600' }}>Use a different email</Text>
-      </Pressable>
+      <Text style={[styles.backHint, { color: colors.textSecondary }]}>
+        Wrong email? Use ← Back above, then enter a different address.
+      </Text>
       <Text style={[styles.tip, { color: colors.textSecondary }]}>
         No email? Check spam. In Supabase: Authentication → Email Templates → Magic Link must include{' '}
         <Text style={styles.mono}>{'{{ .Token }}'}</Text> for a code.
@@ -86,7 +93,7 @@ export default function VerifyOtpScreen() {
 
 const styles = StyleSheet.create({
   help: { fontSize: 14, lineHeight: 20, marginBottom: spacing.md },
-  back: { alignItems: 'center', marginTop: spacing.md },
+  backHint: { fontSize: 13, textAlign: 'center', marginTop: spacing.md, lineHeight: 18 },
   tip: { fontSize: 12, lineHeight: 18, marginTop: spacing.lg, textAlign: 'center' },
   mono: { fontFamily: 'SpaceMono', fontSize: 11 },
 });

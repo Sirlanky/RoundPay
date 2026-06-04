@@ -1,5 +1,6 @@
 import { Session, User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { skipAuthOnLaunch } from '@/lib/dev';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type { Profile } from '@/lib/types';
@@ -10,6 +11,10 @@ interface AuthContextValue {
   profile: Profile | null;
   loading: boolean;
   configured: boolean;
+  /** True when skipping login to build UI (no real Supabase user). */
+  buildMode: boolean;
+  enterBuildMode: () => void;
+  exitBuildMode: () => void;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -20,19 +25,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [buildMode, setBuildMode] = useState(skipAuthOnLaunch);
 
   const refreshProfile = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setProfile(null);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (error) {
+        setProfile(null);
+        return;
+      }
+      setProfile(data as Profile | null);
+    } catch {
       setProfile(null);
-      return;
     }
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-    setProfile(data as Profile | null);
   };
 
   useEffect(() => {
@@ -65,9 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session?.user?.id]);
 
   const signOut = async () => {
+    setBuildMode(false);
     await supabase.auth.signOut();
     setProfile(null);
   };
+
+  const enterBuildMode = () => setBuildMode(true);
+  const exitBuildMode = () => setBuildMode(false);
 
   return (
     <AuthContext.Provider
@@ -77,6 +95,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile,
         loading,
         configured: isSupabaseConfigured,
+        buildMode: buildMode && !session,
+        enterBuildMode,
+        exitBuildMode,
         refreshProfile,
         signOut,
       }}>

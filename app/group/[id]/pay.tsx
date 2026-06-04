@@ -55,7 +55,7 @@ export default function PayScreen() {
   }
 
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen safeArea={false} contentStyle={styles.content}>
       <Text style={[styles.title, { color: colors.text }]}>Pay with Paystack</Text>
       <Text style={[styles.body, { color: colors.textSecondary }]}>
         You will complete payment in a secure checkout. Use test card 4084084084084081 in sandbox mode.

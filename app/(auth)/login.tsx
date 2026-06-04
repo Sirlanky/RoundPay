@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
 import { AuthShell } from '@/components/AuthShell';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -15,6 +16,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const { enterBuildMode } = useAuth();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
 
@@ -39,7 +41,14 @@ export default function LoginScreen() {
 
     setLoading(false);
     if (authError) {
-      setError(authError.message);
+      const msg = authError.message;
+      if (/rate limit/i.test(msg)) {
+        setError(
+          'Too many sign-in emails sent. Wait about 1 hour, then try once. Check your inbox/spam for an older code or link — or use a different email.'
+        );
+      } else {
+        setError(msg);
+      }
       return;
     }
 
@@ -63,6 +72,17 @@ export default function LoginScreen() {
         error={error}
       />
       <Button title="Send sign-in email" onPress={handleLogin} loading={loading} />
+      {__DEV__ ? (
+        <Button
+          title="Preview app (skip sign-in)"
+          variant="secondary"
+          onPress={() => {
+            enterBuildMode();
+            router.replace('/(tabs)');
+          }}
+          style={styles.skip}
+        />
+      ) : null}
       {!isSupabaseConfigured && (
         <Text style={[styles.hint, { color: colors.error }]}>
           Supabase is not configured in .env — emails will not be sent until you add your API keys.
@@ -74,4 +94,5 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   hint: { fontSize: 13, textAlign: 'center', marginTop: spacing.md, lineHeight: 18 },
+  skip: { marginTop: spacing.sm },
 });

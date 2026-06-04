@@ -23,6 +23,8 @@ interface Props {
   style?: ViewStyle;
   contentStyle?: ViewStyle;
   safeArea?: boolean;
+  /** When true with safeArea, only pad bottom (use under a stack/tab header). Default true. */
+  avoidTopInset?: boolean;
 }
 
 export function Screen({
@@ -35,9 +37,12 @@ export function Screen({
   style,
   contentStyle,
   safeArea = true,
+  avoidTopInset = false,
 }: Props) {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const safeEdges =
+    safeArea && avoidTopInset ? (['bottom', 'left', 'right'] as const) : edges;
 
   const inner = scroll ? (
     <ScrollView
@@ -69,7 +74,7 @@ export function Screen({
   if (!safeArea) return body;
 
   return (
-    <SafeAreaView style={[styles.flex, { backgroundColor: colors.background }]} edges={edges}>
+    <SafeAreaView style={[styles.flex, { backgroundColor: colors.background }]} edges={safeEdges}>
       {body}
     </SafeAreaView>
   );

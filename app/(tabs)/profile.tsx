@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
+import { BuildModeBanner } from '@/components/BuildModeBanner';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Input } from '@/components/Input';
@@ -12,7 +13,7 @@ import { spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function ProfileScreen() {
-  const { profile, user, refreshProfile, signOut } = useAuth();
+  const { profile, user, buildMode, refreshProfile, signOut } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
   const [saving, setSaving] = useState(false);
@@ -40,8 +41,11 @@ export default function ProfileScreen() {
   };
 
   return (
-    <Screen contentStyle={styles.content}>
-      <Text style={[styles.email, { color: colors.textSecondary }]}>{user?.email ?? profile?.email}</Text>
+    <Screen contentStyle={styles.content} safeArea={false}>
+      <BuildModeBanner />
+      <Text style={[styles.email, { color: colors.textSecondary }]}>
+        {user?.email ?? profile?.email ?? (buildMode ? 'Not signed in' : '')}
+      </Text>
 
       <Card>
         <Input label="Full name" value={fullName} onChangeText={setFullName} placeholder="Your name" />
@@ -63,7 +67,16 @@ export default function ProfileScreen() {
         )}
         <Button
           title={profile?.account_number ? 'Update bank account' : 'Add bank account'}
-          onPress={() => router.push('/profile/bank')}
+          onPress={() => {
+            if (buildMode && !user) {
+              Alert.alert(
+                'Sign in required',
+                'Bank accounts are saved to your profile after you sign in. Leave build mode and sign in first.'
+              );
+              return;
+            }
+            router.push('/profile/bank');
+          }}
           variant="secondary"
           style={{ marginTop: spacing.md }}
         />

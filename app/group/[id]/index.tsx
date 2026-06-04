@@ -107,7 +107,7 @@ export default function GroupDetailScreen() {
   const potSize = formatNaira(group.contribution_amount * members.length);
 
   return (
-    <Screen contentStyle={styles.content}>
+    <Screen safeArea={false} contentStyle={styles.content}>
       <Card style={styles.hero}>
         <View style={styles.heroTop}>
           <Text style={[styles.name, { color: colors.text }]}>{group.name}</Text>

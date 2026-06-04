@@ -1,6 +1,6 @@
 import { generateInviteCode } from './format';
 import { supabase } from './supabase';
-import type { GroupFrequency } from './types';
+import type { AjoGroup, GroupFrequency } from './types';
 
 export async function createGroup(params: {
   name: string;
@@ -36,6 +36,30 @@ export async function createGroup(params: {
   });
 
   return group;
+}
+
+export type GroupJoinPreview = Pick<
+  AjoGroup,
+  'id' | 'name' | 'contribution_amount' | 'frequency' | 'max_members' | 'status' | 'invite_code'
+> & { member_count: number };
+
+export async function previewGroupByInviteCode(inviteCode: string): Promise<GroupJoinPreview | null> {
+  const code = inviteCode.trim().toUpperCase();
+  const { data: group, error } = await supabase
+    .from('groups')
+    .select('id, name, contribution_amount, frequency, max_members, status, invite_code')
+    .eq('invite_code', code)
+    .eq('status', 'draft')
+    .maybeSingle();
+
+  if (error || !group) return null;
+
+  const { count } = await supabase
+    .from('group_members')
+    .select('*', { count: 'exact', head: true })
+    .eq('group_id', group.id);
+
+  return { ...(group as GroupJoinPreview), member_count: count ?? 0 };
 }
 
 export async function joinGroup(inviteCode: string, userId: string) {

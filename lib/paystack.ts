@@ -1,4 +1,5 @@
-import { getFunctionsUrl, supabase } from './supabase';
+import { getAccessToken, mapPaystackFunctionError } from './auth-session';
+import { getFunctionsUrl } from './supabase';
 
 const publicKey = process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY ?? '';
 
@@ -10,64 +11,51 @@ export function getPaystackPublicKey(): string {
   return publicKey;
 }
 
-export async function resolveBankAccount(
-  accountNumber: string,
-  bankCode: string
-): Promise<{ account_name: string; account_number: string }> {
-  const { data: session } = await supabase.auth.getSession();
-  const token = session.session?.access_token;
+async function authedFunctionPost(functionName: string, body: Record<string, unknown>) {
+  const token = await getAccessToken();
   if (!token) throw new Error('Not authenticated');
 
-  const res = await fetch(getFunctionsUrl('resolve-account'), {
+  const res = await fetch(getFunctionsUrl(functionName), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ account_number: accountNumber, bank_code: bankCode }),
+    body: JSON.stringify(body),
   });
 
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? 'Failed to resolve account');
+  if (!res.ok) throw new Error(mapPaystackFunctionError(json.error ?? 'Request failed'));
   return json.data;
+}
+
+export async function resolveBankAccount(
+  accountNumber: string,
+  bankCode: string
+): Promise<{ account_name: string; account_number: string }> {
+  return authedFunctionPost('resolve-account', {
+    account_number: accountNumber,
+    bank_code: bankCode,
+  });
+}
+
+export async function saveBankAccount(params: {
+  account_number: string;
+  bank_code: string;
+  bank_name: string;
+  account_name: string;
+}): Promise<{ recipient_code: string }> {
+  return authedFunctionPost('save-bank-account', params);
 }
 
 export async function createContributionPayment(
   contributionId: string
 ): Promise<{ authorization_url: string; reference: string }> {
-  const { data: session } = await supabase.auth.getSession();
-  const token = session.session?.access_token;
-  if (!token) throw new Error('Not authenticated');
-
-  const res = await fetch(getFunctionsUrl('create-contribution-payment'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ contribution_id: contributionId }),
+  return authedFunctionPost('create-contribution-payment', {
+    contribution_id: contributionId,
   });
-
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? 'Failed to create payment');
-  return json.data;
 }
 
 export async function triggerPayout(cycleId: string): Promise<{ transfer_code: string }> {
-  const { data: session } = await supabase.auth.getSession();
-  const token = session.session?.access_token;
-  if (!token) throw new Error('Not authenticated');
-
-  const res = await fetch(getFunctionsUrl('trigger-payout'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ cycle_id: cycleId }),
-  });
-
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? 'Failed to trigger payout');
-  return json.data;
+  return authedFunctionPost('trigger-payout', { cycle_id: cycleId });
 }

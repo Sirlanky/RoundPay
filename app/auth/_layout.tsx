@@ -3,17 +3,15 @@ import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { useColorScheme } from '@/components/useColorScheme';
 import { stackScreenOptions } from '@/lib/stack-screen-options';
 
-export default function AuthLayout() {
+export default function AuthCallbackLayout() {
   const scheme = useColorScheme() ?? 'light';
 
   return (
     <Stack screenOptions={stackScreenOptions(scheme)}>
-      <Stack.Screen name="setup" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen
-        name="verify-otp"
+        name="callback"
         options={{
-          title: 'Verify email',
+          title: 'Sign in',
           headerLeft: () => <HeaderBackButton fallbackHref="/(auth)/login" />,
         }}
       />

@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AuthActionBanner } from '@/components/AuthActionBanner';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Input } from '@/components/Input';
@@ -8,13 +9,13 @@ import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors, { brand } from '@/constants/Colors';
 import { NIGERIAN_BANKS } from '@/constants/banks';
-import { getFunctionsUrl, supabase } from '@/lib/supabase';
-import { resolveBankAccount } from '@/lib/paystack';
+import { bankAuthMessage, getAccessToken, mapPaystackFunctionError } from '@/lib/auth-session';
+import { resolveBankAccount, saveBankAccount } from '@/lib/paystack';
 import { spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function BankScreen() {
-  const { refreshProfile } = useAuth();
+  const { user, buildMode, refreshProfile } = useAuth();
   const [accountNumber, setAccountNumber] = useState('');
   const [bankCode, setBankCode] = useState('');
   const [bankName, setBankName] = useState('');
@@ -26,17 +27,28 @@ export default function BankScreen() {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
 
+  const signedIn = !!user && !buildMode;
+
+  const ensureSignedIn = async (): Promise<boolean> => {
+    const token = await getAccessToken();
+    if (token && user) return true;
+    Alert.alert('Sign in required', bankAuthMessage({ buildMode, hasUser: !!user }));
+    return false;
+  };
+
   const handleResolve = async () => {
     if (!accountNumber || !bankCode) {
       Alert.alert('Missing info', 'Select a bank and enter your account number.');
       return;
     }
+    if (!(await ensureSignedIn())) return;
+
     setLoading(true);
     try {
       const result = await resolveBankAccount(accountNumber, bankCode);
       setAccountName(result.account_name);
     } catch (e) {
-      Alert.alert('Error', (e as Error).message);
+      Alert.alert('Could not verify', mapPaystackFunctionError((e as Error).message));
     }
     setLoading(false);
   };
@@ -46,43 +58,37 @@ export default function BankScreen() {
       Alert.alert('Verify first', 'Tap verify account before saving.');
       return;
     }
+    if (!(await ensureSignedIn())) return;
+
     setSaving(true);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
-      if (!token) throw new Error('Not authenticated');
-
-      const res = await fetch(getFunctionsUrl('save-bank-account'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          account_number: accountNumber,
-          bank_code: bankCode,
-          bank_name: bankName,
-          account_name: accountName,
-        }),
+      await saveBankAccount({
+        account_number: accountNumber,
+        bank_code: bankCode,
+        bank_name: bankName,
+        account_name: accountName,
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'Failed to save');
-
       await refreshProfile();
       Alert.alert('Saved', 'Bank account linked for payouts.');
       router.back();
     } catch (e) {
-      Alert.alert('Error', (e as Error).message);
+      Alert.alert('Could not save', mapPaystackFunctionError((e as Error).message));
     }
     setSaving(false);
   };
 
   return (
-    <Screen keyboard contentStyle={styles.content}>
+    <Screen keyboard safeArea={false} contentStyle={styles.content}>
+      <AuthActionBanner action="link a bank account" />
+
       <Text style={[styles.hint, { color: colors.textSecondary }]}>
         We use Paystack to verify your account and send payouts when it is your turn to collect.
       </Text>
 
       <Pressable
         style={[styles.picker, { backgroundColor: colors.card, borderColor: colors.border }]}
-        onPress={() => setPickerOpen(true)}>
+        onPress={() => setPickerOpen(true)}
+        disabled={!signedIn}>
         <Text style={{ color: bankName ? colors.text : colors.textSecondary, fontSize: 16 }}>
           {bankName || 'Select bank'}
         </Text>
@@ -94,9 +100,16 @@ export default function BankScreen() {
         onChangeText={setAccountNumber}
         keyboardType="number-pad"
         placeholder="0123456789"
+        editable={signedIn}
       />
 
-      <Button title="Verify account" onPress={handleResolve} loading={loading} variant="secondary" />
+      <Button
+        title="Verify account"
+        onPress={handleResolve}
+        loading={loading}
+        variant="secondary"
+        disabled={!signedIn}
+      />
 
       {accountName ? (
         <Card style={{ marginTop: spacing.sm }}>
@@ -107,7 +120,12 @@ export default function BankScreen() {
         </Card>
       ) : null}
 
-      <Button title="Save bank account" onPress={handleSave} loading={saving} disabled={!accountName} />
+      <Button
+        title="Save bank account"
+        onPress={handleSave}
+        loading={saving}
+        disabled={!signedIn || !accountName}
+      />
 
       <Modal visible={pickerOpen} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaBankPicker
