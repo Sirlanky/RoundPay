@@ -1,0 +1,148 @@
+// Prisma schema for Ajo Esusu (matches supabase/migrations/001_schema.sql)
+// Used for dev tooling only — the Expo app uses @supabase/supabase-js, not Prisma Client on device.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Profile {
+  id                     String   @id @db.Uuid
+  fullName               String?  @map("full_name")
+  phone                  String?
+  email                  String?
+  bankCode               String?  @map("bank_code")
+  bankName               String?  @map("bank_name")
+  accountNumber          String?  @map("account_number")
+  accountName            String?  @map("account_name")
+  paystackRecipientCode  String?  @map("paystack_recipient_code")
+  expoPushToken          String?  @map("expo_push_token")
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  adminGroups       AjoGroup[]       @relation("GroupAdmin")
+  groupMemberships  GroupMember[]
+  cyclesReceiving   Cycle[]          @relation("CycleRecipient")
+  contributions     Contribution[]
+  payoutsReceived   Payout[]         @relation("PayoutRecipient")
+  auditLogs         PaymentAuditLog[]
+
+  @@map("profiles")
+}
+
+model AjoGroup {
+  id                 String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name               String
+  contributionAmount Int      @map("contribution_amount")
+  frequency          String
+  maxMembers         Int      @default(10) @map("max_members")
+  adminFeePercent    Decimal  @default(0) @map("admin_fee_percent") @db.Decimal(5, 2)
+  status             String   @default("draft")
+  currentCycle       Int      @default(0) @map("current_cycle")
+  adminId            String   @map("admin_id") @db.Uuid
+  inviteCode         String   @unique @map("invite_code")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  admin   Profile       @relation("GroupAdmin", fields: [adminId], references: [id])
+  members GroupMember[]
+  cycles  Cycle[]
+
+  @@index([inviteCode], map: "groups_invite_code_idx")
+  @@index([adminId], map: "groups_admin_id_idx")
+  @@map("groups")
+}
+
+model GroupMember {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  groupId       String   @map("group_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  rotationOrder Int      @map("rotation_order")
+  role          String   @default("member")
+  hasCollected  Boolean  @default(false) @map("has_collected")
+  joinedAt      DateTime @default(now()) @map("joined_at") @db.Timestamptz(6)
+
+  group         AjoGroup       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user          Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contributions Contribution[]
+
+  @@unique([groupId, userId])
+  @@unique([groupId, rotationOrder])
+  @@index([groupId], map: "group_members_group_id_idx")
+  @@index([userId], map: "group_members_user_id_idx")
+  @@map("group_members")
+}
+
+model Cycle {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  groupId     String   @map("group_id") @db.Uuid
+  cycleNumber Int      @map("cycle_number")
+  recipientId String   @map("recipient_id") @db.Uuid
+  dueDate     DateTime @map("due_date") @db.Timestamptz(6)
+  status      String   @default("open")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  group         AjoGroup       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  recipient     Profile        @relation("CycleRecipient", fields: [recipientId], references: [id])
+  contributions Contribution[]
+  payout        Payout?
+
+  @@unique([groupId, cycleNumber])
+  @@index([groupId], map: "cycles_group_id_idx")
+  @@map("cycles")
+}
+
+model Contribution {
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  cycleId           String    @map("cycle_id") @db.Uuid
+  memberId          String    @map("member_id") @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  amount            Int
+  status            String    @default("pending")
+  paystackReference String?   @map("paystack_reference")
+  paidAt            DateTime? @map("paid_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  cycle     Cycle           @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  member    GroupMember     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  user      Profile         @relation(fields: [userId], references: [id])
+  auditLogs PaymentAuditLog[]
+
+  @@unique([cycleId, memberId])
+  @@index([cycleId], map: "contributions_cycle_id_idx")
+  @@map("contributions")
+}
+
+model Payout {
+  id                   String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  cycleId              String   @unique @map("cycle_id") @db.Uuid
+  recipientId          String   @map("recipient_id") @db.Uuid
+  amount               Int
+  status               String   @default("pending")
+  paystackTransferCode String?  @map("paystack_transfer_code")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  cycle     Cycle   @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  recipient Profile @relation("PayoutRecipient", fields: [recipientId], references: [id])
+
+  @@map("payouts")
+}
+
+model PaymentAuditLog {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  contributionId String   @map("contribution_id") @db.Uuid
+  markedBy       String   @map("marked_by") @db.Uuid
+  note           String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  contribution Contribution @relation(fields: [contributionId], references: [id])
+  marker       Profile      @relation(fields: [markedBy], references: [id])
+
+  @@map("payment_audit_log")
+}

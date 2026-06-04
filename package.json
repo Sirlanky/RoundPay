@@ -29,7 +29,10 @@
     "react-native-worklets": "0.8.3"
   },
   "devDependencies": {
+    "@prisma/client": "^7.8.0",
     "@types/react": "~19.2.2",
+    "dotenv": "^17.4.2",
+    "prisma": "^7.8.0",
     "supabase": "^2.105.0",
     "typescript": "~6.0.3"
   },
@@ -39,6 +42,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "env:check": "node scripts/check-env.js",
+    "prisma:generate": "prisma generate",
+    "prisma:pull": "prisma db pull",
+    "prisma:studio": "prisma studio",
     "supabase:login": "supabase login",
     "supabase:link": "supabase link",
     "supabase:deploy-functions": "supabase functions deploy resolve-account && supabase functions deploy save-bank-account && supabase functions deploy create-contribution-payment && supabase functions deploy paystack-webhook && supabase functions deploy trigger-payout && supabase functions deploy send-reminders"
