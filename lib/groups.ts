@@ -1,6 +1,8 @@
 import { generateInviteCode } from './format';
+import { ensureProfile } from './profile';
 import { supabase } from './supabase';
 import type { AjoGroup, GroupFrequency } from './types';
+import type { User } from '@supabase/supabase-js';
 
 export async function createGroup(params: {
   name: string;
@@ -8,8 +10,10 @@ export async function createGroup(params: {
   frequency: GroupFrequency;
   maxMembers: number;
   adminFeePercent: number;
-  adminId: string;
+  adminUser: User;
 }) {
+  await ensureProfile(params.adminUser);
+
   const inviteCode = generateInviteCode();
   const { data: group, error } = await supabase
     .from('groups')
@@ -19,7 +23,7 @@ export async function createGroup(params: {
       frequency: params.frequency,
       max_members: params.maxMembers,
       admin_fee_percent: params.adminFeePercent,
-      admin_id: params.adminId,
+      admin_id: params.adminUser.id,
       invite_code: inviteCode,
       status: 'draft',
     })
@@ -30,7 +34,7 @@ export async function createGroup(params: {
 
   await supabase.from('group_members').insert({
     group_id: group.id,
-    user_id: params.adminId,
+    user_id: params.adminUser.id,
     rotation_order: 1,
     role: 'admin',
   });

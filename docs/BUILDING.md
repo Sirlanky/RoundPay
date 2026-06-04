@@ -7,7 +7,7 @@ Auth email / rate limits can wait. Use **build mode** to work on screens and flo
 **Option A — button (easiest)**
 
 1. `npx expo start --clear`
-2. On **Sign in**, tap **Continue without sign-in (build mode)**
+2. In dev, the app usually **enters automatically** with a guest account. If not, login → **Enter app**, or Profile → **Your account** → **Enter app (no email)**
 3. You land on Home / Groups / Profile with a green banner at the top
 
 **Option B — auto-skip**

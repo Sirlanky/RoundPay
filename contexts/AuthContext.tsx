@@ -1,6 +1,8 @@
 import { Session, User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { skipAuthOnLaunch } from '@/lib/dev';
+import { autoGuestOnLaunch, previewUiOnLaunch } from '@/lib/dev';
+import { getAccountMode, canSaveToCloud, type AccountMode } from '@/lib/account-status';
+import { signInAsGuestUser } from '@/lib/guest-auth';
 import { registerForPushNotifications } from '@/lib/notifications';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type { Profile } from '@/lib/types';
@@ -11,10 +13,14 @@ interface AuthContextValue {
   profile: Profile | null;
   loading: boolean;
   configured: boolean;
+  accountMode: AccountMode;
+  /** True when groups, profile, and admin actions can persist. */
+  canSave: boolean;
   /** True when skipping login to build UI (no real Supabase user). */
   buildMode: boolean;
   enterBuildMode: () => void;
   exitBuildMode: () => void;
+  signInAsGuest: () => Promise<User>;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -25,20 +31,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [buildMode, setBuildMode] = useState(skipAuthOnLaunch);
+  const [buildMode, setBuildMode] = useState(previewUiOnLaunch);
+
+  const buildModeActive = buildMode && !session;
+  const user = session?.user ?? null;
+  const accountMode = getAccountMode(user, buildModeActive);
+  const canSave = canSaveToCloud(accountMode);
 
   const refreshProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const {
+        data: { user: u },
+      } = await supabase.auth.getUser();
+      if (!u) {
         setProfile(null);
         return;
       }
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', u.id).single();
       if (error) {
         setProfile(null);
         return;
@@ -55,22 +64,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
+    let cancelled = false;
+
+    async function bootstrap() {
+      const { data: { session: existing } } = await supabase.auth.getSession();
+      if (cancelled) return;
+
+      if (existing) {
+        setSession(existing);
+        setBuildMode(false);
+        setLoading(false);
+        return;
+      }
+
+      if (previewUiOnLaunch) {
+        setBuildMode(true);
+        setLoading(false);
+        return;
+      }
+
+      if (autoGuestOnLaunch) {
+        try {
+          await signInAsGuestUser();
+          const { data: { session: guestSession } } = await supabase.auth.getSession();
+          if (!cancelled && guestSession) {
+            setSession(guestSession);
+            setBuildMode(false);
+          }
+        } catch {
+          // Anonymous off — user chooses on login screen
+        }
+      }
+
+      if (!cancelled) setLoading(false);
+    }
+
+    void bootstrap();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      setLoading(false);
+      if (s) setBuildMode(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
     if (session?.user) {
       refreshProfile().then(() => {
-        // Push registration can fail in Expo Go / simulator; don't block the app
         registerForPushNotifications().catch(() => {});
       });
     } else {
@@ -87,17 +133,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const enterBuildMode = () => setBuildMode(true);
   const exitBuildMode = () => setBuildMode(false);
 
+  const signInAsGuest = async () => {
+    setBuildMode(false);
+    const guest = await signInAsGuestUser();
+    const { data: { session: s } } = await supabase.auth.getSession();
+    if (s) setSession(s);
+    await refreshProfile();
+    return guest;
+  };
+
   return (
     <AuthContext.Provider
       value={{
         session,
-        user: session?.user ?? null,
+        user,
         profile,
         loading,
         configured: isSupabaseConfigured,
-        buildMode: buildMode && !session,
+        accountMode,
+        canSave,
+        buildMode: buildModeActive,
         enterBuildMode,
         exitBuildMode,
+        signInAsGuest,
         refreshProfile,
         signOut,
       }}>

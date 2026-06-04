@@ -12,11 +12,12 @@ import Colors from '@/constants/Colors';
 import { messageFromGroupError } from '@/lib/group-errors';
 import { isValidInviteCode } from '@/lib/group-validation';
 import { joinGroup, previewGroupByInviteCode, type GroupJoinPreview } from '@/lib/groups';
+import { promptSaveAuth } from '@/lib/prompt-save-auth';
 import { spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function JoinGroupScreen() {
-  const { user } = useAuth();
+  const { user, exitBuildMode, signInAsGuest } = useAuth();
   const { code } = useLocalSearchParams<{ code?: string }>();
   const [inviteCode, setInviteCode] = useState(code?.toString().toUpperCase() ?? '');
   const [preview, setPreview] = useState<GroupJoinPreview | null>(null);
@@ -50,7 +51,24 @@ export default function JoinGroupScreen() {
 
   const handleJoin = async () => {
     if (!user) {
-      Alert.alert('Sign in required', 'Leave build mode and sign in to join a group.');
+      promptSaveAuth({
+        action: 'join a group',
+        onSignIn: () => {
+          exitBuildMode();
+          router.replace('/(auth)/login');
+        },
+        onGuest: async () => {
+          setLoading(true);
+          try {
+            const guest = await signInAsGuest();
+            const group = await joinGroup(inviteCode.trim(), guest.id);
+            router.replace(`/group/${group.id}`);
+          } catch (e) {
+            Alert.alert('Could not join', messageFromGroupError(e));
+          }
+          setLoading(false);
+        },
+      });
       return;
     }
     if (!isValidInviteCode(inviteCode)) {

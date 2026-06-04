@@ -12,12 +12,13 @@ import Colors, { brand } from '@/constants/Colors';
 import { messageFromGroupError } from '@/lib/group-errors';
 import { poolSummary, validateCreateGroupInput } from '@/lib/group-validation';
 import { createGroup } from '@/lib/groups';
+import { promptSaveAuth } from '@/lib/prompt-save-auth';
 import type { AjoGroup, GroupFrequency } from '@/lib/types';
 import { spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function CreateGroupScreen() {
-  const { user } = useAuth();
+  const { user, canSave, exitBuildMode, signInAsGuest } = useAuth();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [maxMembers, setMaxMembers] = useState('10');
@@ -25,54 +26,92 @@ export default function CreateGroupScreen() {
   const [frequency, setFrequency] = useState<GroupFrequency>('weekly');
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState<AjoGroup | null>(null);
+  const [formHint, setFormHint] = useState('');
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
 
-  const summary = useMemo(() => {
-    const v = validateCreateGroupInput({
-      name,
-      amountRaw: amount,
-      maxMembersRaw: maxMembers,
-      adminFeeRaw: adminFee,
-    });
-    if (!v.ok) return null;
-    return poolSummary(v.data.contributionAmount, v.data.maxMembers, frequency, v.data.adminFeePercent);
-  }, [name, amount, maxMembers, adminFee, frequency]);
+  const validation = useMemo(
+    () =>
+      validateCreateGroupInput({
+        name,
+        amountRaw: amount,
+        maxMembersRaw: maxMembers,
+        adminFeeRaw: adminFee,
+      }),
+    [name, amount, maxMembers, adminFee]
+  );
+
+  const summary =
+    validation.ok
+      ? poolSummary(
+          validation.data.contributionAmount,
+          validation.data.maxMembers,
+          frequency,
+          validation.data.adminFeePercent
+        )
+      : null;
 
   const handleCreate = async () => {
-    if (!user) {
-      Alert.alert('Sign in required', 'Leave build mode and sign in to create a group.');
+    setFormHint('');
+
+    if (!validation.ok) {
+      setFormHint(validation.message);
+      Alert.alert('Check your details', validation.message);
       return;
     }
 
-    const v = validateCreateGroupInput({
-      name,
-      amountRaw: amount,
-      maxMembersRaw: maxMembers,
-      adminFeeRaw: adminFee,
-    });
-    if (!v.ok) {
-      Alert.alert('Check your details', v.message);
+    if (!canSave) {
+      promptSaveAuth({
+        action: 'create a group',
+        onSignIn: () => {
+          exitBuildMode();
+          router.replace('/(auth)/login');
+        },
+        onGuest: async () => {
+          setLoading(true);
+          try {
+            const guest = await signInAsGuest();
+            const group = await createGroup({
+              name: validation.data.name,
+              contributionAmount: validation.data.contributionAmount,
+              frequency,
+              maxMembers: validation.data.maxMembers,
+              adminFeePercent: validation.data.adminFeePercent,
+              adminUser: guest,
+            });
+            setCreated(group as AjoGroup);
+          } catch (e) {
+            const msg = messageFromGroupError(e);
+            setFormHint(msg);
+            Alert.alert('Could not create group', msg);
+          }
+          setLoading(false);
+        },
+      });
       return;
     }
 
     setLoading(true);
     try {
       const group = await createGroup({
-        name: v.data.name,
-        contributionAmount: v.data.contributionAmount,
+        name: validation.data.name,
+        contributionAmount: validation.data.contributionAmount,
         frequency,
-        maxMembers: v.data.maxMembers,
-        adminFeePercent: v.data.adminFeePercent,
-        adminId: user.id,
+        maxMembers: validation.data.maxMembers,
+        adminFeePercent: validation.data.adminFeePercent,
+        adminUser: user,
       });
       setCreated(group as AjoGroup);
     } catch (e) {
-      Alert.alert('Could not create group', messageFromGroupError(e));
+      const msg = messageFromGroupError(e);
+      setFormHint(msg);
+      Alert.alert('Could not create group', msg);
     }
     setLoading(false);
   };
+
+  const buttonTitle = canSave ? 'Create group' : 'Create group (enter app first)';
 
   if (created) {
     return (
@@ -84,6 +123,7 @@ export default function CreateGroupScreen() {
             setCreated(null);
             setName('');
             setAmount('');
+            setFormHint('');
           }}
         />
       </Screen>
@@ -150,14 +190,15 @@ export default function CreateGroupScreen() {
           <Text style={[styles.section, { color: colors.text }]}>Summary</Text>
           <Text style={[styles.summary, { color: colors.text }]}>{summary}</Text>
         </Card>
-      ) : null}
+      ) : (
+        <Text style={[styles.formHint, { color: colors.textSecondary }]}>
+          Enter a group name and contribution amount (e.g. 50000) to see a summary.
+        </Text>
+      )}
 
-      <Button
-        title="Create group"
-        onPress={handleCreate}
-        loading={loading}
-        disabled={!user || !summary}
-      />
+      {formHint ? <Text style={[styles.formHint, { color: colors.error }]}>{formHint}</Text> : null}
+
+      <Button title={buttonTitle} onPress={handleCreate} loading={loading} />
     </Screen>
   );
 }
@@ -171,4 +212,5 @@ const styles = StyleSheet.create({
   chip: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1.5 },
   feeHint: { fontSize: 12, lineHeight: 17, marginTop: -spacing.xs },
   summary: { fontSize: 15, lineHeight: 22 },
+  formHint: { fontSize: 13, lineHeight: 18, marginBottom: spacing.sm, textAlign: 'center' },
 });

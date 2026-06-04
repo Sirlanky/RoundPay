@@ -84,8 +84,9 @@ export default function VerifyOtpScreen() {
         Wrong email? Use ← Back above, then enter a different address.
       </Text>
       <Text style={[styles.tip, { color: colors.textSecondary }]}>
-        No email? Check spam. In Supabase: Authentication → Email Templates → Magic Link must include{' '}
-        <Text style={styles.mono}>{'{{ .Token }}'}</Text> for a code.
+        No email today? Open Supabase → Authentication → Logs after you tap Resend. Free email is limited
+        (~2/hour). Add <Text style={styles.mono}>{'{{ .Token }}'}</Text> to the Magic Link template for a
+        code, or use custom SMTP — see docs/EMAIL_AUTH_TROUBLESHOOTING.md in the project.
       </Text>
     </AuthShell>
   );

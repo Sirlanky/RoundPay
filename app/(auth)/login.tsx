@@ -16,7 +16,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { enterBuildMode } = useAuth();
+  const { enterBuildMode, signInAsGuest } = useAuth();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
 
@@ -53,14 +53,35 @@ export default function LoginScreen() {
     }
 
     Alert.alert(
-      'Check your email',
-      'You may get a 6-digit code OR a sign-in link.\n\n• Code: enter it on the next screen\n• Link: tap it to open the app\n\nCheck spam/junk if nothing arrives.',
+      'Request accepted',
+      'If email does not arrive in 2 minutes:\n\n' +
+        '• Check spam/junk\n' +
+        '• Supabase free email is ~2/hour — wait 1 hour if you tried many times\n' +
+        '• Dashboard → Authentication → Logs (see if send failed)\n' +
+        '• Magic Link template needs {{ .Token }} for a 6-digit code\n' +
+        '• Or set up custom SMTP (see docs/EMAIL_AUTH_TROUBLESHOOTING.md)\n\n' +
+        'You may get a code OR a "Sign in" link — both work.',
       [{ text: 'OK', onPress: () => router.push({ pathname: '/(auth)/verify-otp', params: { email: email.trim() } }) }]
     );
   };
 
+  const enterApp = () => {
+    setLoading(true);
+    void signInAsGuest()
+      .then(() => router.replace('/(tabs)'))
+      .catch((e) =>
+        Alert.alert(
+          'Could not enter app',
+          e instanceof Error ? e.message : 'Enable Anonymous sign-ins in Supabase.'
+        )
+      )
+      .finally(() => setLoading(false));
+  };
+
   return (
-    <AuthShell title="Sign in" subtitle="We'll email you a one-time code or sign-in link." keyboard>
+    <AuthShell title="Ajo Esusu" subtitle="Enter with your email, or use the app right away (no email)." keyboard>
+      <Button title="Enter app" onPress={enterApp} loading={loading} />
+      <Text style={[styles.divider, { color: colors.textSecondary }]}>or sign in with email</Text>
       <Input
         label="Email address"
         placeholder="you@example.com"
@@ -71,10 +92,10 @@ export default function LoginScreen() {
         autoComplete="email"
         error={error}
       />
-      <Button title="Send sign-in email" onPress={handleLogin} loading={loading} />
+      <Button title="Send sign-in email" onPress={handleLogin} loading={loading} variant="secondary" />
       {__DEV__ ? (
         <Button
-          title="Preview app (skip sign-in)"
+          title="Preview UI only (no saving)"
           variant="secondary"
           onPress={() => {
             enterBuildMode();
@@ -94,5 +115,6 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   hint: { fontSize: 13, textAlign: 'center', marginTop: spacing.md, lineHeight: 18 },
+  divider: { fontSize: 13, textAlign: 'center', marginVertical: spacing.md },
   skip: { marginTop: spacing.sm },
 });

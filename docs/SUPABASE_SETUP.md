@@ -34,8 +34,21 @@ EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_xxxxxxxx
 
 1. Go to **Authentication** → **Providers**.
 2. Enable **Email**.
-3. Under **Email**, turn off **Confirm email** for faster testing (optional).
-4. Go to **Authentication** → **URL configuration**:
+
+### Guest accounts (no email — for testing)
+
+If sign-in email is rate-limited or not arriving:
+
+1. **Authentication** → **Providers** → **Anonymous**
+2. Turn **Anonymous sign-ins** **ON**
+3. In the app (dev build): login → **Continue as guest (create groups)**, or Create group → **Guest account**
+
+Guest users are real Supabase accounts and can create/join draft groups. They have no email until you add email sign-in later.
+
+## Step 3b — Email provider details
+
+1. Under **Email**, turn off **Confirm email** for faster testing (optional).
+2. Go to **Authentication** → **URL configuration**:
    - **Site URL:** `ajoesusu://` (production / dev build)
    - **Redirect URLs** — add **all** of these:
      - `ajoesusu://**`
@@ -43,9 +56,9 @@ EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_xxxxxxxx
      - `exp://127.0.0.1:8081/**` (iOS Simulator + Expo Go)
      - `exp://localhost:8081/**` (optional)
 
-5. **Expo Go only:** After `npx expo start`, open the **Login** screen in the app. In development it shows the exact redirect URL (e.g. `exp://192.168.x.x:8081/--/auth/callback`). **Copy that line into Redirect URLs** in Supabase if email links open Safari and go nowhere.
+3. **Expo Go only:** After `npx expo start`, open the **Login** screen in the app. In development it shows the exact redirect URL (e.g. `exp://192.168.x.x:8081/--/auth/callback`). **Copy that line into Redirect URLs** in Supabase if email links open Safari and go nowhere.
 
-6. Restart Expo after changing `.env`: `npx expo start --clear`
+4. Restart Expo after changing `.env`: `npx expo start --clear`
 
 ### Important: send a 6-digit code (not only a link)
 
@@ -71,6 +84,14 @@ By default Supabase emails a **magic link**, not a code. The app supports both, 
 3. Open `supabase/migrations/001_schema.sql` in this repo, copy the **entire file**, paste into the editor.
 4. Click **Run** (or Cmd+Enter).
 5. Confirm success — you should see tables: `profiles`, `groups`, `group_members`, `cycles`, `contributions`, `payouts`.
+
+### Step 4b — Profile + guest fix (required for Enter app)
+
+If you see **Could not set up your profile**:
+
+1. **SQL Editor** → **New query**
+2. Copy all of `supabase/migrations/RUN_IN_SQL_EDITOR.sql` from this repo, paste, **Run**
+3. Reload the app and tap **Enter app** again
 
 ## Step 5 — Verify tables
 

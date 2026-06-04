@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
-import { BuildModeBanner } from '@/components/BuildModeBanner';
+import { AccountControlCard } from '@/components/AccountControlCard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Input } from '@/components/Input';
@@ -13,7 +13,7 @@ import { spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function ProfileScreen() {
-  const { profile, user, buildMode, refreshProfile, signOut } = useAuth();
+  const { profile, user, canSave, refreshProfile } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
   const [saving, setSaving] = useState(false);
@@ -35,17 +35,9 @@ export default function ProfileScreen() {
     Alert.alert('Saved', 'Profile updated.');
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.replace('/(auth)/login');
-  };
-
   return (
     <Screen contentStyle={styles.content} safeArea={false}>
-      <BuildModeBanner />
-      <Text style={[styles.email, { color: colors.textSecondary }]}>
-        {user?.email ?? profile?.email ?? (buildMode ? 'Not signed in' : '')}
-      </Text>
+      <AccountControlCard />
 
       <Card>
         <Input label="Full name" value={fullName} onChangeText={setFullName} placeholder="Your name" />
@@ -68,11 +60,8 @@ export default function ProfileScreen() {
         <Button
           title={profile?.account_number ? 'Update bank account' : 'Add bank account'}
           onPress={() => {
-            if (buildMode && !user) {
-              Alert.alert(
-                'Sign in required',
-                'Bank accounts are saved to your profile after you sign in. Leave build mode and sign in first.'
-              );
+            if (!canSave) {
+              Alert.alert('Enter app first', 'Open Profile → Enter app (no email), then add your bank.');
               return;
             }
             router.push('/profile/bank');
@@ -82,14 +71,12 @@ export default function ProfileScreen() {
         />
       </Card>
 
-      <Button title="Sign out" onPress={handleSignOut} variant="secondary" />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingTop: 8 },
-  email: { fontSize: 14, marginBottom: spacing.md },
   bankTitle: { fontSize: 16, fontWeight: '600' },
   bankHint: { fontSize: 13, marginTop: 4 },
   bankDetail: { fontSize: 14, marginTop: spacing.md, lineHeight: 22 },

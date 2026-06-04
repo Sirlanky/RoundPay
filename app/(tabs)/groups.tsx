@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { GroupCard } from '@/components/GroupCard';
 import { Screen } from '@/components/Screen';
@@ -13,12 +14,12 @@ import { spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function GroupsScreen() {
-  const { user } = useAuth();
+  const { user, canSave } = useAuth();
+  const router = useRouter();
   const [groups, setGroups] = useState<AjoGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
 
@@ -63,6 +64,16 @@ export default function GroupsScreen() {
         setRefreshing(false);
       }}
       contentStyle={styles.content}>
+      {!canSave ? (
+        <Card style={styles.controlCard}>
+          <Text style={[styles.controlTitle, { color: colors.text }]}>You’re not in the app yet</Text>
+          <Text style={[styles.controlBody, { color: colors.textSecondary }]}>
+            Open Profile and tap Enter app to create and manage groups.
+          </Text>
+          <Button title="Go to Profile" onPress={() => router.push('/(tabs)/profile')} style={styles.controlBtn} />
+        </Card>
+      ) : null}
+
       <View style={styles.actions}>
         <Button title="Create" onPress={() => router.push('/group/create')} style={styles.actionBtn} />
         <Button
@@ -92,5 +103,9 @@ const styles = StyleSheet.create({
   content: { paddingTop: 8 },
   actions: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   actionBtn: { flex: 1, marginVertical: 0 },
+  controlCard: { marginBottom: spacing.md },
+  controlTitle: { fontSize: 15, fontWeight: '700', marginBottom: spacing.xs },
+  controlBody: { fontSize: 14, lineHeight: 20, marginBottom: spacing.sm },
+  controlBtn: { marginBottom: 0 },
   error: { fontSize: 14, marginBottom: spacing.md, lineHeight: 20 },
 });

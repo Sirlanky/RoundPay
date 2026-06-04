@@ -44,6 +44,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "env:check": "node scripts/check-env.js",
+    "auth:verify-guest": "node scripts/verify-guest-auth.js",
     "prisma:generate": "prisma generate",
     "prisma:pull": "prisma db pull",
     "prisma:studio": "prisma studio",

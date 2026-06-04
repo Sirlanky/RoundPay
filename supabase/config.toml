@@ -20,6 +20,7 @@ port = 54323
 
 [auth]
 enabled = true
+enable_anonymous_sign_ins = true
 site_url = "ajoesusu://"
 additional_redirect_urls = ["ajoesusu://**", "exp://**"]
 

@@ -17,7 +17,10 @@ export function messageFromGroupError(e: unknown): string {
     return 'Sign in required. Leave build mode and sign in to save.';
   }
   if (msg.includes('profiles') || msg.includes('foreign key')) {
-    return 'Complete your profile first, then try again.';
+    return 'Your profile is not set up yet. Sign out, sign in again, then retry.';
+  }
+  if (msg.includes('row-level security') || msg.includes('RLS') || err.code === '42501') {
+    return 'Permission denied. Sign in and ensure database migrations are applied in Supabase.';
   }
   return msg || 'Something went wrong. Try again.';
 }

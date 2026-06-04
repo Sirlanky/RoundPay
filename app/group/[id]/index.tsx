@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Colors, { brand } from '@/constants/Colors';
 import { formatNaira, frequencyLabel } from '@/lib/format';
 import { messageFromGroupError } from '@/lib/group-errors';
+import { promptSaveAuth } from '@/lib/prompt-save-auth';
 import { memberDisplayName, type MemberWithProfile } from '@/lib/members';
 import { advanceCycle, startGroup } from '@/lib/groups';
 import { triggerPayout } from '@/lib/paystack';
@@ -24,7 +25,7 @@ const MIN_MEMBERS_TO_START = 2;
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user, buildMode } = useAuth();
+  const { user, canSave, signInAsGuest, exitBuildMode } = useAuth();
   const { group, members, currentCycle, loading, error, refetch } = useGroup(id);
   const { contributions, paidCount, loading: contribLoading } = useContributions(currentCycle?.id);
   const [actionLoading, setActionLoading] = useState(false);
@@ -47,15 +48,31 @@ export default function GroupDetailScreen() {
 
   const handleStart = async () => {
     if (!id) return;
+    if (!canSave) {
+      promptSaveAuth({
+        action: 'start this group',
+        onSignIn: () => {
+          exitBuildMode();
+          router.replace('/(auth)/login');
+        },
+        onGuest: async () => {
+          await signInAsGuest();
+          await runStartAfterAuth();
+        },
+      });
+      return;
+    }
+
+    await runStartAfterAuth();
+  };
+
+  const runStartAfterAuth = async () => {
+    if (!id || !group) return;
     if (members.length < MIN_MEMBERS_TO_START) {
       Alert.alert(
         'Not enough members',
         `You need at least ${MIN_MEMBERS_TO_START} members to start. Share the invite code below.`
       );
-      return;
-    }
-    if (buildMode || !user) {
-      Alert.alert('Sign in required', 'Sign in to start the group and save progress.');
       return;
     }
 
@@ -214,16 +231,16 @@ export default function GroupDetailScreen() {
               title="Start group"
               onPress={handleStart}
               loading={actionLoading}
-              disabled={!canStartDraft || buildMode || !user}
+              disabled={!canStartDraft || !canSave}
             />
             {!canStartDraft ? (
               <Text style={[styles.actionHint, { color: colors.textSecondary }]}>
                 Add {MIN_MEMBERS_TO_START - members.length} more member
                 {MIN_MEMBERS_TO_START - members.length === 1 ? '' : 's'} to enable start.
               </Text>
-            ) : buildMode || !user ? (
+            ) : !canSave ? (
               <Text style={[styles.actionHint, { color: colors.textSecondary }]}>
-                Sign in to start the group for real.
+                Enter app from Profile to start this group.
               </Text>
             ) : null}
           </>

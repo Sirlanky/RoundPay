@@ -68,6 +68,10 @@ export async function createSessionFromUrl(url: string): Promise<{ ok: boolean; 
   }
 }
 
+/**
+ * Request sign-in email. Includes redirect for magic-link sign-in.
+ * A 6-digit code appears only if the Supabase Magic Link template contains {{ .Token }}.
+ */
 export async function sendEmailOtp(email: string) {
   return supabase.auth.signInWithOtp({
     email: email.trim(),
@@ -77,3 +81,4 @@ export async function sendEmailOtp(email: string) {
     },
   });
 }
+
