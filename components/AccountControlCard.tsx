@@ -6,12 +6,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import Colors, { brand } from '@/constants/Colors';
 import { accountModeLabel, canSaveToCloud, getAccountMode } from '@/lib/account-status';
 import { GUEST_SIGN_IN_SETUP } from '@/lib/guest-auth';
+import { alertProfileDatabaseFix, PROFILE_SETUP_FIX_MESSAGE } from '@/lib/profile';
 import { spacing } from '@/constants/theme';
 import { useColorScheme } from './useColorScheme';
 
 /** Profile hub: see account mode and switch how you use the app. */
 export function AccountControlCard() {
-  const { user, buildMode, signInAsGuest, signOut, exitBuildMode, enterBuildMode } = useAuth();
+  const { user, profile, buildMode, signInAsGuest, signOut, exitBuildMode, enterBuildMode, refreshProfile } =
+    useAuth();
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
@@ -72,6 +74,32 @@ export function AccountControlCard() {
           : 'Tap Enter app to take control — no email needed if Anonymous sign-in is on in Supabase.'}
       </Text>
 
+      {canSave && !profile ? (
+        <>
+          <Text style={[styles.warn, { color: colors.error }]}>
+            Profile row missing in database — create group will fail until you run the SQL fix.
+          </Text>
+          <Button
+            title="How to fix database"
+            variant="secondary"
+            onPress={() => alertProfileDatabaseFix()}
+            style={styles.btn}
+          />
+          <Button
+            title="Retry profile setup"
+            variant="secondary"
+            onPress={() => {
+              void signInAsGuest()
+                .then(() => refreshProfile())
+                .catch((e) =>
+                  Alert.alert('Still blocked', e instanceof Error ? e.message : PROFILE_SETUP_FIX_MESSAGE)
+                );
+            }}
+            style={styles.btn}
+          />
+        </>
+      ) : null}
+
       {mode === 'preview' || mode === 'signed_out' ? (
         <Button title="Enter app (no email)" onPress={enterAppAsGuest} style={styles.btn} />
       ) : null}
@@ -108,5 +136,6 @@ const styles = StyleSheet.create({
   status: { fontSize: 15, fontWeight: '600', marginBottom: spacing.xs },
   id: { fontSize: 12, marginBottom: spacing.sm },
   body: { fontSize: 14, lineHeight: 20, marginBottom: spacing.sm },
+  warn: { fontSize: 13, lineHeight: 18, marginBottom: spacing.sm },
   btn: { marginTop: spacing.xs, marginBottom: 0 },
 });

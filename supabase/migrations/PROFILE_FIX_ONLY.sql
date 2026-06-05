@@ -1,7 +1,5 @@
--- Paste this ENTIRE file into Supabase → SQL Editor → Run once.
--- Safe to re-run (idempotent). Fixes guest profile + create group.
+-- Minimal fix if RUN_IN_SQL_EDITOR.sql failed partway. Paste and Run in SQL Editor.
 
--- === 1. Profile setup (run this even if other steps failed before) ===
 create or replace function public.ensure_my_profile()
 returns void
 language plpgsql
@@ -15,9 +13,7 @@ begin
   if uid is null then
     raise exception 'Not authenticated';
   end if;
-
   select email into user_email from auth.users where id = uid;
-
   insert into public.profiles (id, email, full_name)
   values (uid, user_email, null)
   on conflict (id) do nothing;
@@ -32,12 +28,5 @@ create policy "Users can insert own profile"
   on public.profiles for insert
   to authenticated
   with check (auth.uid() = id);
-
--- === 2. Join preview (optional; skip errors if you already ran 002) ===
-drop policy if exists "Authenticated can preview draft groups by invite code" on public.groups;
-create policy "Authenticated can preview draft groups by invite code"
-  on public.groups for select
-  to authenticated
-  using (status = 'draft');
 
 notify pgrst, 'reload schema';

@@ -16,8 +16,15 @@ export function messageFromGroupError(e: unknown): string {
   if (msg.includes('JWT') || msg.includes('not authenticated') || err.code === 'PGRST301') {
     return 'Sign in required. Leave build mode and sign in to save.';
   }
-  if (msg.includes('profiles') || msg.includes('foreign key')) {
-    return 'Your profile is not set up yet. Sign out, sign in again, then retry.';
+  if (
+    msg.includes('profiles') ||
+    msg.includes('foreign key') ||
+    msg.includes('RUN_IN_SQL_EDITOR') ||
+    msg.includes('ensure_my_profile') ||
+    msg.includes('Profile insert blocked') ||
+    msg.includes('Missing ensure_my_profile')
+  ) {
+    return 'Database fix needed: run supabase/migrations/RUN_IN_SQL_EDITOR.sql in Supabase SQL Editor, then Sign out → Enter app, and create again.';
   }
   if (msg.includes('row-level security') || msg.includes('RLS') || err.code === '42501') {
     return 'Permission denied. Sign in and ensure database migrations are applied in Supabase.';

@@ -47,8 +47,14 @@ async function main() {
 
   const { error: rpcError } = await supabase.rpc('ensure_my_profile');
   if (rpcError) {
+    if (/PGRST205|schema cache.*profiles/i.test(rpcError.message)) {
+      console.error('❌ Table public.profiles does not exist — run 001_schema.sql first');
+      console.error('   npm run db:verify');
+      process.exit(1);
+    }
     if (/ensure_my_profile|PGRST202/i.test(rpcError.message)) {
-      console.error('❌ Profile setup RPC missing — run supabase/migrations/RUN_IN_SQL_EDITOR.sql in Supabase SQL Editor');
+      console.error('❌ Profile setup RPC missing — run PROFILE_FIX_ONLY.sql in Supabase SQL Editor');
+      console.error('   https://supabase.com/dashboard/project/dolcajrcjhsfpyxzwtjk/sql/new');
       process.exit(1);
     }
     console.error('❌ ensure_my_profile failed:', rpcError.message);

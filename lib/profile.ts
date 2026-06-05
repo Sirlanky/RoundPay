@@ -1,37 +1,39 @@
 import type { User } from '@supabase/supabase-js';
+import { Alert } from 'react-native';
 import { supabase } from './supabase';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+export const PROFILE_SQL_DASHBOARD_URL =
+  'https://supabase.com/dashboard/project/dolcajrcjhsfpyxzwtjk/sql/new';
+
+export const PROFILE_SETUP_FIX_MESSAGE =
+  'Your Supabase project still needs a one-time SQL fix. Open SQL Editor, paste and run the file supabase/migrations/RUN_IN_SQL_EDITOR.sql from this repo, then Profile → Sign out → Enter app, and try again.';
+
 function profileSetupMessage(cause: string): string {
-  if (__DEV__) {
-    return `${cause} Run supabase/migrations/RUN_IN_SQL_EDITOR.sql in Supabase SQL Editor, then try Enter app again.`;
+  return `${cause} ${PROFILE_SETUP_FIX_MESSAGE}`;
+}
+
+async function loadProfileId(userId: string): Promise<string | null> {
+  const { data, error } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+  if (error && !/JWT|PGRST116/i.test(error.message)) {
+    throw new Error(profileSetupMessage(error.message));
   }
-  return 'Could not set up your profile. Run the SQL fix in Supabase (see docs/SUPABASE_SETUP.md), then sign in again.';
+  return data?.id ?? null;
 }
 
 /** Ensures a profiles row exists (needed before creating groups). */
 export async function ensureProfile(user: User): Promise<void> {
-  for (let attempt = 0; attempt < 6; attempt++) {
-    const { data: existing, error: selectError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle();
+  const existing = await loadProfileId(user.id);
+  if (existing) return;
 
-    if (existing) return;
-    if (selectError && !selectError.message.includes('JWT')) {
-      throw new Error(profileSetupMessage(selectError.message));
-    }
-
-    if (attempt > 0) await sleep(250 * attempt);
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await sleep(300 * (attempt + 1));
+    if (await loadProfileId(user.id)) return;
   }
 
   const { error: rpcError } = await supabase.rpc('ensure_my_profile');
-  if (!rpcError) {
-    const { data: afterRpc } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
-    if (afterRpc) return;
-  }
+  if (!rpcError && (await loadProfileId(user.id))) return;
 
   const rpcMissing =
     rpcError &&
@@ -48,19 +50,34 @@ export async function ensureProfile(user: User): Promise<void> {
     full_name: user.user_metadata?.full_name ?? null,
   });
 
-  if (!insertError) return;
+  if (!insertError && (await loadProfileId(user.id))) return;
 
-  if (insertError.message.includes('duplicate') || insertError.code === '23505') {
-    return;
+  if (insertError && (insertError.message.includes('duplicate') || insertError.code === '23505')) {
+    if (await loadProfileId(user.id)) return;
   }
 
-  if (/row-level security|42501/i.test(insertError.message)) {
-    throw new Error(
-      profileSetupMessage(
-        'Profile insert blocked by database security (RLS).'
-      )
-    );
+  if (insertError && /row-level security|42501/i.test(insertError.message)) {
+    throw new Error(profileSetupMessage('Profile insert blocked (RLS).'));
   }
 
-  throw new Error(profileSetupMessage(insertError.message));
+  if (rpcMissing) {
+    throw new Error(profileSetupMessage('Missing ensure_my_profile function in database.'));
+  }
+
+  throw new Error(
+    profileSetupMessage(insertError?.message ?? 'Profile row still missing after setup.')
+  );
+}
+
+export function isProfileDatabaseFixError(message: string): boolean {
+  return (
+    /PROFILE_NOT_READY|ensure_my_profile|RUN_IN_SQL_EDITOR|Profile insert blocked|Missing ensure_my_profile/i.test(
+      message
+    ) ||
+    /profiles|foreign key/i.test(message)
+  );
+}
+
+export function alertProfileDatabaseFix(title = 'Database fix required') {
+  Alert.alert(title, PROFILE_SETUP_FIX_MESSAGE, [{ text: 'OK' }]);
 }

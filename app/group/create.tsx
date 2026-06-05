@@ -10,6 +10,7 @@ import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors, { brand } from '@/constants/Colors';
 import { messageFromGroupError } from '@/lib/group-errors';
+import { alertProfileDatabaseFix, isProfileDatabaseFixError } from '@/lib/profile';
 import { poolSummary, validateCreateGroupInput } from '@/lib/group-validation';
 import { createGroup } from '@/lib/groups';
 import { promptSaveAuth } from '@/lib/prompt-save-auth';
@@ -84,7 +85,8 @@ export default function CreateGroupScreen() {
           } catch (e) {
             const msg = messageFromGroupError(e);
             setFormHint(msg);
-            Alert.alert('Could not create group', msg);
+            if (isProfileDatabaseFixError(msg)) alertProfileDatabaseFix();
+            else Alert.alert('Could not create group', msg);
           }
           setLoading(false);
         },
@@ -106,7 +108,8 @@ export default function CreateGroupScreen() {
     } catch (e) {
       const msg = messageFromGroupError(e);
       setFormHint(msg);
-      Alert.alert('Could not create group', msg);
+      if (isProfileDatabaseFixError(msg)) alertProfileDatabaseFix();
+      else Alert.alert('Could not create group', msg);
     }
     setLoading(false);
   };
