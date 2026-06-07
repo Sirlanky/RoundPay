@@ -15,7 +15,7 @@ export function useGroup(groupId: string | undefined) {
     setError(null);
 
     const [groupRes, membersRes, cycleRes] = await Promise.all([
-      supabase.from('groups').select('*').eq('id', groupId).single(),
+      supabase.from('groups').select('*').eq('id', groupId).maybeSingle(),
       supabase
         .from('group_members')
         .select('*, profile:profiles(*)')
@@ -30,8 +30,15 @@ export function useGroup(groupId: string | undefined) {
         .maybeSingle(),
     ]);
 
-    if (groupRes.error) setError(groupRes.error.message);
-    else setGroup(groupRes.data as AjoGroup);
+    if (groupRes.error) {
+      setError(groupRes.error.message);
+      setGroup(null);
+    } else if (!groupRes.data) {
+      setGroup(null);
+      setError(null);
+    } else {
+      setGroup(groupRes.data as AjoGroup);
+    }
 
     if (membersRes.error) setError(membersRes.error.message);
     else setMembers((membersRes.data ?? []) as GroupMember[]);

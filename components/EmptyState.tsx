@@ -1,7 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
-import Colors from '@/constants/Colors';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from './useColorScheme';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '@/components/ui/Text';
+import { useThemeTokens } from '@/theme';
 
 interface Props {
   title: string;
@@ -9,13 +8,25 @@ interface Props {
 }
 
 export function EmptyState({ title, message }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, radius, spacing } = useThemeTokens();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-      <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          borderRadius: radius.md,
+          padding: spacing.xl,
+        },
+      ]}>
+      <Text variant="headingSmall" style={styles.title}>
+        {title}
+      </Text>
+      <Text variant="bodySmall" color="secondary" style={styles.message}>
+        {message}
+      </Text>
     </View>
   );
 }
@@ -23,11 +34,15 @@ export function EmptyState({ title, message }: Props) {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    padding: spacing.xl,
-    borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',
+    marginBottom: 16,
   },
-  title: { fontSize: 17, fontWeight: '600', marginBottom: spacing.sm },
-  message: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  title: {
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  message: {
+    textAlign: 'center',
+  },
 });

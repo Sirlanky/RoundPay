@@ -2,22 +2,21 @@ import { StyleSheet, Text, View } from 'react-native';
 import { EmptyState } from './EmptyState';
 import { useColorScheme } from './useColorScheme';
 import Colors, { brand } from '@/constants/Colors';
+import { membersStillNeeded, rosterIsComplete } from '@/lib/group-validation';
 import { spacing } from '@/constants/theme';
-
-const MIN_MEMBERS_TO_START = 2;
 
 interface Props {
   memberCount: number;
   maxMembers: number;
   isAdmin: boolean;
+  adminParticipates: boolean;
 }
 
-export function DraftGroupPanel({ memberCount, maxMembers, isAdmin }: Props) {
+export function DraftGroupPanel({ memberCount, maxMembers, isAdmin, adminParticipates }: Props) {
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
-  const spotsLeft = Math.max(0, maxMembers - memberCount);
-  const needMore = Math.max(0, MIN_MEMBERS_TO_START - memberCount);
-  const canStart = memberCount >= MIN_MEMBERS_TO_START;
+  const spotsLeft = membersStillNeeded(memberCount, maxMembers);
+  const rosterComplete = rosterIsComplete(memberCount, maxMembers);
   const fillRatio = maxMembers > 0 ? memberCount / maxMembers : 0;
 
   return (
@@ -26,8 +25,10 @@ export function DraftGroupPanel({ memberCount, maxMembers, isAdmin }: Props) {
         <Text style={[styles.title, { color: colors.text }]}>Setting up your Ajo</Text>
         <Text style={[styles.body, { color: colors.textSecondary }]}>
           {isAdmin
-            ? 'Share the invite code so others can join. When at least 2 members are in, you can start cycle 1.'
-            : 'The admin will start the first cycle once enough members have joined.'}
+            ? adminParticipates
+              ? `Share the invite code so others can join. Cycle 1 starts when all ${maxMembers} members are in.`
+              : `You are organizing only. Share the invite code — cycle 1 starts when all ${maxMembers} members join.`
+            : `The admin will start the first cycle once all ${maxMembers} members have joined.`}
         </Text>
 
         <View style={[styles.track, { backgroundColor: colors.background }]}>
@@ -35,32 +36,32 @@ export function DraftGroupPanel({ memberCount, maxMembers, isAdmin }: Props) {
         </View>
         <Text style={[styles.stats, { color: colors.textSecondary }]}>
           {memberCount}/{maxMembers} members
-          {spotsLeft > 0 ? ` · ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left` : ' · Full'}
+          {spotsLeft > 0 ? ` · ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left` : ' · Roster full'}
         </Text>
       </View>
 
-      {memberCount < MIN_MEMBERS_TO_START ? (
+      {!rosterComplete ? (
         <EmptyState
           title="Waiting for members"
           message={
             isAdmin
-              ? `Need ${needMore} more member${needMore === 1 ? '' : 's'} before you can start (minimum ${MIN_MEMBERS_TO_START}).`
-              : `At least ${MIN_MEMBERS_TO_START} members must join before the admin can start.`
+              ? `Need ${spotsLeft} more member${spotsLeft === 1 ? '' : 's'} to fill the roster (${maxMembers} total).`
+              : `${memberCount}/${maxMembers} joined. The admin can start when everyone is in.`
           }
         />
       ) : isAdmin ? (
         <Text style={[styles.ready, { color: brand.primary }]}>
-          Ready to start — {memberCount} members joined.
+          Roster full — ready to start cycle 1.
         </Text>
       ) : (
         <Text style={[styles.ready, { color: colors.textSecondary }]}>
-          {memberCount} members joined. Waiting for admin to start.
+          All {maxMembers} members joined. Waiting for admin to start.
         </Text>
       )}
 
-      {!canStart && isAdmin ? (
+      {!rosterComplete && isAdmin ? (
         <Text style={[styles.hint, { color: colors.textSecondary }]}>
-          Start group unlocks when {MIN_MEMBERS_TO_START}+ members are in the list below.
+          Start group unlocks when {maxMembers}/{maxMembers} members are in the list below.
         </Text>
       ) : null}
     </View>

@@ -1,14 +1,18 @@
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { AdminVerificationBanner, useCanAdministerGroup } from '@/components/AdminVerificationBanner';
 import { AuthActionBanner } from '@/components/AuthActionBanner';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { GroupCreatedSuccess } from '@/components/GroupCreatedSuccess';
+import { GroupFrequencyPicker } from '@/components/GroupFrequencyPicker';
 import { Input } from '@/components/Input';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors, { brand } from '@/constants/Colors';
+import { useSupportedGroupFrequencies } from '@/hooks/useSupportedGroupFrequencies';
+import { pickDefaultFrequency } from '@/lib/group-frequency-support';
 import { messageFromGroupError } from '@/lib/group-errors';
 import { alertProfileDatabaseFix, isProfileDatabaseFixError } from '@/lib/profile';
 import { poolSummary, validateCreateGroupInput } from '@/lib/group-validation';
@@ -19,11 +23,12 @@ import { spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function CreateGroupScreen() {
-  const { user, canSave, exitBuildMode, signInAsGuest } = useAuth();
+  const { user, profile, canSave, exitBuildMode, signInAsGuest } = useAuth();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [maxMembers, setMaxMembers] = useState('10');
   const [adminFee, setAdminFee] = useState('0');
+  const [adminParticipates, setAdminParticipates] = useState(true);
   const [frequency, setFrequency] = useState<GroupFrequency>('weekly');
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState<AjoGroup | null>(null);
@@ -31,6 +36,16 @@ export default function CreateGroupScreen() {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
+  const { supported, loading: freqLoading } = useSupportedGroupFrequencies();
+  const canAdminister = useCanAdministerGroup();
+
+  useEffect(() => {
+    if (!supported.includes(frequency)) {
+      setFrequency(pickDefaultFrequency(supported));
+    }
+  }, [supported, frequency]);
+
+  const allFrequenciesSupported = supported.length >= 3;
 
   const validation = useMemo(
     () =>
@@ -62,6 +77,16 @@ export default function CreateGroupScreen() {
       return;
     }
 
+    if (!canAdminister) {
+      Alert.alert(
+        'Identity verification required',
+        profile?.identity_status === 'in_review'
+          ? 'Your identity is in review. You can create a group once verification is approved.'
+          : 'Verify your identity before creating a group as admin.'
+      );
+      return;
+    }
+
     if (!canSave) {
       promptSaveAuth({
         action: 'create a group',
@@ -80,6 +105,8 @@ export default function CreateGroupScreen() {
               maxMembers: validation.data.maxMembers,
               adminFeePercent: validation.data.adminFeePercent,
               adminUser: guest,
+              adminProfile: null,
+              adminParticipates,
             });
             setCreated(group as AjoGroup);
           } catch (e) {
@@ -94,6 +121,11 @@ export default function CreateGroupScreen() {
       return;
     }
 
+    if (!user) {
+      Alert.alert('Sign in required', 'Enter the app from Profile to create a group.');
+      return;
+    }
+
     setLoading(true);
     try {
       const group = await createGroup({
@@ -103,6 +135,8 @@ export default function CreateGroupScreen() {
         maxMembers: validation.data.maxMembers,
         adminFeePercent: validation.data.adminFeePercent,
         adminUser: user,
+        adminProfile: profile,
+        adminParticipates,
       });
       setCreated(group as AjoGroup);
     } catch (e) {
@@ -136,10 +170,11 @@ export default function CreateGroupScreen() {
   return (
     <Screen keyboard safeArea={false} contentStyle={styles.content}>
       <Text style={[styles.lead, { color: colors.textSecondary }]}>
-        Set the rules for your Ajo. Members join with an invite code before you start cycle 1.
+        Set the rules for your Ajo. Everyone must join before the admin starts cycle 1.
       </Text>
 
       <AuthActionBanner action="create a group" />
+      <AdminVerificationBanner />
 
       <Card>
         <Text style={[styles.section, { color: colors.text }]}>Basics</Text>
@@ -153,24 +188,17 @@ export default function CreateGroupScreen() {
         />
 
         <Text style={[styles.label, { color: colors.text }]}>How often?</Text>
-        <View style={styles.row}>
-          {(['weekly', 'monthly'] as GroupFrequency[]).map((f) => (
-            <Pressable
-              key={f}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: frequency === f ? brand.primary : colors.background,
-                  borderColor: brand.primary,
-                },
-              ]}
-              onPress={() => setFrequency(f)}>
-              <Text style={{ color: frequency === f ? '#fff' : colors.text, fontWeight: '600' }}>
-                {f === 'weekly' ? 'Weekly' : 'Monthly'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <GroupFrequencyPicker
+          value={frequency}
+          onChange={setFrequency}
+          supported={supported}
+          disabled={freqLoading}
+        />
+        {!allFrequenciesSupported && !freqLoading ? (
+          <Text style={[styles.freqHint, { color: colors.textSecondary }]}>
+            Daily needs the database update — run 021_group_frequency.sql in Supabase if you have not already.
+          </Text>
+        ) : null}
       </Card>
 
       <Card>
@@ -188,6 +216,28 @@ export default function CreateGroupScreen() {
         </Text>
       </Card>
 
+      <Card>
+        <View style={styles.participationRow}>
+          <View style={styles.participationCopy}>
+            <Text style={[styles.section, { color: colors.text, marginBottom: 4 }]}>Your role</Text>
+            <Text style={[styles.feeHint, { color: colors.textSecondary, marginTop: 0 }]}>
+              {adminParticipates
+                ? 'You will contribute and collect on your turn like other members.'
+                : 'Organizer only — you manage the group but are not in the rotation.'}
+            </Text>
+          </View>
+          <Switch
+            value={adminParticipates}
+            onValueChange={setAdminParticipates}
+            trackColor={{ false: colors.border, true: brand.primary + '88' }}
+            thumbColor={adminParticipates ? brand.primary : colors.textSecondary}
+          />
+        </View>
+        <Text style={[styles.participationLabel, { color: colors.text }]}>
+          {adminParticipates ? 'I will contribute' : 'Organizer only'}
+        </Text>
+      </Card>
+
       {summary ? (
         <Card>
           <Text style={[styles.section, { color: colors.text }]}>Summary</Text>
@@ -201,7 +251,12 @@ export default function CreateGroupScreen() {
 
       {formHint ? <Text style={[styles.formHint, { color: colors.error }]}>{formHint}</Text> : null}
 
-      <Button title={buttonTitle} onPress={handleCreate} loading={loading} />
+      <Button
+        title={buttonTitle}
+        onPress={handleCreate}
+        loading={loading}
+        disabled={!canAdminister}
+      />
     </Screen>
   );
 }
@@ -211,9 +266,11 @@ const styles = StyleSheet.create({
   lead: { fontSize: 15, lineHeight: 22, marginBottom: spacing.md },
   section: { fontSize: 16, fontWeight: '700', marginBottom: spacing.md },
   label: { fontSize: 14, fontWeight: '500', marginBottom: spacing.sm },
-  row: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  chip: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', borderWidth: 1.5 },
+  freqHint: { fontSize: 12, lineHeight: 17, marginTop: -spacing.xs, marginBottom: spacing.sm },
   feeHint: { fontSize: 12, lineHeight: 17, marginTop: -spacing.xs },
   summary: { fontSize: 15, lineHeight: 22 },
   formHint: { fontSize: 13, lineHeight: 18, marginBottom: spacing.sm, textAlign: 'center' },
+  participationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  participationCopy: { flex: 1 },
+  participationLabel: { fontSize: 14, fontWeight: '600', marginTop: spacing.sm },
 });

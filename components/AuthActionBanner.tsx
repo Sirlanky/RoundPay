@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { Alert, StyleSheet } from 'react-native';
 import { Button } from './Button';
 import { Card } from './Card';
+import { Text } from '@/components/ui/Text';
 import { useAuth } from '@/contexts/AuthContext';
-import Colors from '@/constants/Colors';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from './useColorScheme';
+import { useTranslation } from '@/contexts/LanguageContext';
+import { messageFromAuthError } from '@/lib/auth-errors';
+import { spacing } from '@/theme';
 
 interface Props {
   action: string;
@@ -15,31 +16,30 @@ interface Props {
 export function AuthActionBanner({ action }: Props) {
   const { canSave, signInAsGuest } = useAuth();
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { t } = useTranslation();
 
   if (canSave) return null;
 
   return (
-    <Card style={styles.card}>
-      <Text style={[styles.title, { color: colors.text }]}>Enter app to continue</Text>
-      <Text style={[styles.body, { color: colors.textSecondary }]}>
-        Tap Enter app (no email) on Profile, or use the buttons below to {action}.
+    <Card variant="standard" style={styles.card}>
+      <Text variant="bodyMedium" style={styles.title}>
+        {t('auth.enterAppTitle')}
       </Text>
-      {__DEV__ ? (
-        <Button
-          title="Continue as guest"
-          onPress={() => {
-            void signInAsGuest().catch((e) =>
-              Alert.alert('Guest sign-in failed', e instanceof Error ? e.message : 'Try again')
-            );
-          }}
-          style={styles.btn}
-        />
-      ) : null}
+      <Text variant="bodySmall" color="secondary" style={styles.body}>
+        {t('auth.enterAppBody', { action })}
+      </Text>
       <Button
-        title="Sign in with email"
-        variant={__DEV__ ? 'secondary' : 'primary'}
+        title={t('auth.continueAsGuest')}
+        onPress={() => {
+          void signInAsGuest().catch((e) =>
+            Alert.alert(t('auth.couldNotEnterAppTitle'), messageFromAuthError(e))
+          );
+        }}
+        style={styles.btn}
+      />
+      <Button
+        title={t('auth.signInEmail')}
+        variant="secondary"
         onPress={() => router.push('/(auth)/login')}
         style={styles.btn}
       />
@@ -49,7 +49,7 @@ export function AuthActionBanner({ action }: Props) {
 
 const styles = StyleSheet.create({
   card: { marginBottom: spacing.md },
-  title: { fontSize: 15, fontWeight: '700', marginBottom: spacing.xs },
-  body: { fontSize: 14, lineHeight: 20 },
+  title: { fontWeight: '700', marginBottom: spacing.xs },
+  body: { lineHeight: 20 },
   btn: { marginTop: spacing.sm, marginBottom: 0 },
 });

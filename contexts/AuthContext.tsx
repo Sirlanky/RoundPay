@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { autoGuestOnLaunch, previewUiOnLaunch } from '@/lib/dev';
 import { getAccountMode, canSaveToCloud, type AccountMode } from '@/lib/account-status';
 import { signInAsGuestUser } from '@/lib/guest-auth';
-import { registerForPushNotifications } from '@/lib/notifications';
+import { clearPushTokenOnSignOut, registerForPushNotifications } from '@/lib/notifications';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import type { Profile } from '@/lib/types';
 
@@ -85,14 +85,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (autoGuestOnLaunch) {
         try {
-          await signInAsGuestUser();
+          await Promise.race([
+            signInAsGuestUser(),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('Guest sign-in timed out')), 8000)
+            ),
+          ]);
           const { data: { session: guestSession } } = await supabase.auth.getSession();
           if (!cancelled && guestSession) {
             setSession(guestSession);
             setBuildMode(false);
           }
         } catch {
-          // Anonymous off — user chooses on login screen
+          // Anonymous off or network slow — user chooses on login screen
         }
       }
 
@@ -125,7 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session?.user?.id]);
 
   const signOut = async () => {
+    const userId = session?.user?.id;
     setBuildMode(false);
+    if (userId) {
+      await clearPushTokenOnSignOut(userId).catch(() => {});
+    }
     await supabase.auth.signOut();
     setProfile(null);
   };

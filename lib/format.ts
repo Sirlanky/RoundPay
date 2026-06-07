@@ -19,6 +19,4 @@ export function generateInviteCode(): string {
   return code;
 }
 
-export function frequencyLabel(frequency: 'weekly' | 'monthly'): string {
-  return frequency === 'weekly' ? 'Weekly' : 'Monthly';
-}
+export { frequencyLabel } from './group-frequency';

@@ -22,15 +22,16 @@ If you get **no email at all** (not even in spam), the app is usually fine — *
 
 Supabase’s default template often sends a **link**, not a code.
 
-1. **Authentication** → **Email Templates** → **Magic Link** (or **Email OTP** if shown)  
-2. Include in the body:
+1. **Authentication** → **Email Templates** → **Magic Link** (sign-in from login screen)  
+2. Also edit **Change Email Address** (guest linking email on an anonymous account)  
+3. Include in the body of **both** templates:
 
 ```html
 <p>Your sign-in code: <strong>{{ .Token }}</strong></p>
 <p>Or tap this link: <a href="{{ .ConfirmationURL }}">Sign in</a></p>
 ```
 
-3. **Save**
+4. **Save**
 
 Without `{{ .Token }}`, you may only get a link — not a 6-digit code.
 

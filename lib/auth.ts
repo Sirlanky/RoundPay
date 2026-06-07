@@ -1,4 +1,6 @@
 import * as Linking from 'expo-linking';
+import { clearPendingSignInEmail } from './pending-sign-in-email';
+import { ensureProfile } from './profile';
 import { getAuthRedirectUrl } from './redirect';
 import { supabase } from './supabase';
 
@@ -27,6 +29,15 @@ function parseUrlParams(url: string): URLSearchParams {
 
 /** Parse Supabase magic-link / OAuth redirect and create a session. */
 export async function createSessionFromUrl(url: string): Promise<{ ok: boolean; error?: string }> {
+  async function finishOk(): Promise<{ ok: boolean; error?: string }> {
+    await clearPendingSignInEmail();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) await ensureProfile(user);
+    return { ok: true };
+  }
+
   try {
     const parsed = Linking.parse(url);
     const query = parsed.queryParams ?? {};
@@ -36,7 +47,7 @@ export async function createSessionFromUrl(url: string): Promise<{ ok: boolean; 
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) return { ok: false, error: error.message };
-      return { ok: true };
+      return finishOk();
     }
 
     const access_token =
@@ -47,19 +58,26 @@ export async function createSessionFromUrl(url: string): Promise<{ ok: boolean; 
     if (access_token && refresh_token) {
       const { error } = await supabase.auth.setSession({ access_token, refresh_token });
       if (error) return { ok: false, error: error.message };
-      return { ok: true };
+      return finishOk();
     }
 
     const token_hash =
       firstParam(query.token_hash as string | string[] | undefined) ?? merged.get('token_hash') ?? undefined;
     const type = firstParam(query.type as string | string[] | undefined) ?? merged.get('type') ?? 'email';
     if (token_hash) {
-      const { error } = await supabase.auth.verifyOtp({
+      const otpType = (type === 'email_change' ? 'email_change' : type === 'magiclink' ? 'magiclink' : 'email') as
+        | 'email'
+        | 'email_change'
+        | 'magiclink';
+      let { error } = await supabase.auth.verifyOtp({
         token_hash,
-        type: type as 'email',
+        type: otpType,
       });
+      if (error && otpType === 'email') {
+        ({ error } = await supabase.auth.verifyOtp({ token_hash, type: 'magiclink' }));
+      }
       if (error) return { ok: false, error: error.message };
-      return { ok: true };
+      return finishOk();
     }
 
     return { ok: false, error: 'No sign-in tokens in this link. Use the 6-digit code on the Verify screen instead.' };
@@ -79,6 +97,18 @@ export async function sendEmailOtp(email: string) {
       shouldCreateUser: true,
       emailRedirectTo: getAuthRedirectUrl(),
     },
+  });
+}
+
+export async function verifyEmailOtp(params: {
+  email: string;
+  token: string;
+  type: 'email' | 'email_change' | 'magiclink';
+}) {
+  return supabase.auth.verifyOtp({
+    email: params.email.trim(),
+    token: params.token.trim(),
+    type: params.type,
   });
 }
 

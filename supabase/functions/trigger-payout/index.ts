@@ -1,13 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-
-async function sendPush(token: string, title: string, body: string) {
-  await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: token, title, body, sound: 'default' }),
-  });
-}
+import { sendPushToUser } from '../_shared/push.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -101,13 +94,17 @@ Deno.serve(async (req) => {
       .eq('group_id', cycle.group_id)
       .eq('user_id', cycle.recipient_id);
 
-    if (recipient.expo_push_token) {
-      await sendPush(
-        recipient.expo_push_token,
-        'Payout sent!',
-        `You received ₦${payoutAmount.toLocaleString()} for this cycle.`
-      );
-    }
+    await sendPushToUser(
+      supabase,
+      cycle.recipient_id,
+      'Payout sent!',
+      `You received ₦${payoutAmount.toLocaleString()} for this cycle.`,
+      {
+        type: 'payout_completed',
+        groupId: cycle.group_id,
+        relatedEntityId: cycle_id,
+      }
+    );
 
     return new Response(
       JSON.stringify({ data: { transfer_code: transferJson.data.transfer_code } }),

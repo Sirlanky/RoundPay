@@ -1,23 +1,23 @@
 import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
-import Colors, { brand } from '@/constants/Colors';
+import { brand, getColors } from '@/theme/colors';
+import { typography } from '@/theme/typography';
 
 export function stackScreenOptions(scheme: 'light' | 'dark'): NativeStackNavigationOptions {
-  const colors = Colors[scheme];
+  const colors = getColors(scheme);
   return {
     headerShown: true,
     headerBackVisible: true,
     headerBackTitle: 'Back',
     headerTintColor: brand.primary,
     headerStyle: { backgroundColor: colors.background },
-    headerTitleStyle: { fontWeight: '600', color: colors.text },
+    headerTitleStyle: { ...typography.headingSmall, color: colors.textPrimary },
     headerShadowVisible: false,
     contentStyle: { backgroundColor: colors.background, flex: 1 },
     gestureEnabled: true,
   };
 }
 
-/** Form sheets (create/join/pay): card stack, not iOS modal — avoids extra top gap. */
 export function formScreenOptions(
   scheme: 'light' | 'dark',
   title: string

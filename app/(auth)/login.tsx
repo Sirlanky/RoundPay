@@ -1,90 +1,165 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { AuthShell } from '@/components/AuthShell';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
-import { sendEmailOtp } from '@/lib/auth';
+import { messageFromAuthError } from '@/lib/auth-errors';
+import { isValidSignInEmail, requestEmailSignIn } from '@/lib/email-sign-in';
+import { isGuestUser } from '@/lib/guest-auth';
+import { requestPasswordReset, signInWithEmailPassword } from '@/lib/password-sign-in';
+import { getAuthRedirectUrl, getAuthRedirectUrlForDocs } from '@/lib/redirect';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { spacing } from '@/constants/theme';
+import { useThemeTokens } from '@/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState('');
+  const [usePasswordSignIn, setUsePasswordSignIn] = useState(true);
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { enterBuildMode, signInAsGuest } = useAuth();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { user, signInAsGuest } = useAuth();
+  const { t } = useTranslation();
+  const { colors } = useThemeTokens();
+  const redirectUrl = getAuthRedirectUrl();
+  const isGuest = isGuestUser(user);
 
-  const handleLogin = async () => {
-    if (!email.trim()) {
-      setError('Enter your email');
+  const copyRedirect = async () => {
+    await Clipboard.setStringAsync(getAuthRedirectUrlForDocs());
+    Alert.alert(t('auth.copyRedirectTitle'), t('auth.copyRedirectBody'));
+  };
+
+  const validateEmail = (): string | null => {
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setError(t('auth.enterEmailError'));
+      return null;
+    }
+    if (!isValidSignInEmail(trimmed)) {
+      setError(t('auth.invalidEmail'));
+      return null;
+    }
+    setError('');
+    return trimmed;
+  };
+
+  const handleGuestSignIn = async () => {
+    setError('');
+    setGuestLoading(true);
+    try {
+      await signInAsGuest();
+    } catch (e) {
+      Alert.alert(t('auth.couldNotEnterAppTitle'), messageFromAuthError(e));
+    } finally {
+      setGuestLoading(false);
+    }
+  };
+
+  const handlePasswordSignIn = async () => {
+    const trimmed = validateEmail();
+    if (!trimmed) return;
+    if (!password) {
+      setError(t('auth.enterPasswordError'));
       return;
     }
     setError('');
-    setLoading(true);
 
     if (!isSupabaseConfigured) {
-      setLoading(false);
-      Alert.alert(
-        'Supabase not connected',
-        'Add your Project URL and anon key to .env, then restart with: npx expo start --clear\n\nSee docs/SUPABASE_SETUP.md'
-      );
+      Alert.alert(t('auth.supabaseNotConfiguredTitle'), t('auth.supabaseNotConfiguredBody'));
       return;
     }
 
-    const { error: authError } = await sendEmailOtp(email.trim());
+    setPasswordLoading(true);
+    const { error: authError } = await signInWithEmailPassword(trimmed, password);
+    setPasswordLoading(false);
 
-    setLoading(false);
     if (authError) {
-      const msg = authError.message;
-      if (/rate limit/i.test(msg)) {
-        setError(
-          'Too many sign-in emails sent. Wait about 1 hour, then try once. Check your inbox/spam for an older code or link — or use a different email.'
-        );
-      } else {
-        setError(msg);
-      }
+      setError(messageFromAuthError(authError));
       return;
     }
 
-    Alert.alert(
-      'Request accepted',
-      'If email does not arrive in 2 minutes:\n\n' +
-        '• Check spam/junk\n' +
-        '• Supabase free email is ~2/hour — wait 1 hour if you tried many times\n' +
-        '• Dashboard → Authentication → Logs (see if send failed)\n' +
-        '• Magic Link template needs {{ .Token }} for a 6-digit code\n' +
-        '• Or set up custom SMTP (see docs/EMAIL_AUTH_TROUBLESHOOTING.md)\n\n' +
-        'You may get a code OR a "Sign in" link — both work.',
-      [{ text: 'OK', onPress: () => router.push({ pathname: '/(auth)/verify-otp', params: { email: email.trim() } }) }]
-    );
+    router.replace('/(tabs)');
   };
 
-  const enterApp = () => {
-    setLoading(true);
-    void signInAsGuest()
-      .then(() => router.replace('/(tabs)'))
-      .catch((e) =>
-        Alert.alert(
-          'Could not enter app',
-          e instanceof Error ? e.message : 'Enable Anonymous sign-ins in Supabase.'
-        )
-      )
-      .finally(() => setLoading(false));
+  const handleEmailSignIn = async () => {
+    const trimmed = validateEmail();
+    if (!trimmed) return;
+
+    if (!isSupabaseConfigured) {
+      Alert.alert(t('auth.supabaseNotConfiguredTitle'), t('auth.supabaseNotConfiguredBody'));
+      return;
+    }
+
+    setEmailLoading(true);
+    const { error: authError } = await requestEmailSignIn(trimmed);
+    setEmailLoading(false);
+
+    if (authError) {
+      setError(messageFromAuthError(authError));
+      return;
+    }
+
+    router.push({ pathname: '/(auth)/verify-otp', params: { email: trimmed.toLowerCase() } });
+  };
+
+  const handleForgotPassword = async () => {
+    const trimmed = validateEmail();
+    if (!trimmed) return;
+
+    if (!isSupabaseConfigured) {
+      Alert.alert(t('auth.supabaseNotConfiguredTitle'), t('auth.supabaseNotConfiguredBody'));
+      return;
+    }
+
+    setResetLoading(true);
+    const { error: authError } = await requestPasswordReset(trimmed);
+    setResetLoading(false);
+
+    if (authError) {
+      Alert.alert(t('auth.couldNotEnterAppTitle'), messageFromAuthError(authError));
+      return;
+    }
+
+    Alert.alert(t('auth.resetPasswordSentTitle'), t('auth.resetPasswordSentBody'));
   };
 
   return (
-    <AuthShell title="Ajo Esusu" subtitle="Enter with your email, or use the app right away (no email)." keyboard>
-      <Button title="Enter app" onPress={enterApp} loading={loading} />
-      <Text style={[styles.divider, { color: colors.textSecondary }]}>or sign in with email</Text>
+    <AuthShell title={t('auth.loginTitle')} subtitle={t('auth.loginSubtitle')} keyboard>
+      <Text style={[styles.recommend, { color: colors.textPrimary }]}>{t('auth.guestRecommend')}</Text>
+
+      {!isGuest ? (
+        <Button
+          title={t('auth.enterAppNoEmail')}
+          onPress={() => void handleGuestSignIn()}
+          loading={guestLoading}
+        />
+      ) : null}
+
+      <View style={styles.dividerRow}>
+        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+        <Text style={[styles.divider, { color: colors.textSecondary }]}>
+          {isGuest ? t('auth.linkEmailDivider') : t('auth.emailOptionalDivider')}
+        </Text>
+        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+      </View>
+
+      {isGuest ? (
+        <Text style={[styles.guestNote, { color: colors.textSecondary }]}>{t('auth.linkingGuestNote')}</Text>
+      ) : usePasswordSignIn ? (
+        <Text style={[styles.guestNote, { color: colors.textSecondary }]}>{t('auth.passwordDivider')}</Text>
+      ) : null}
+
       <Input
-        label="Email address"
-        placeholder="you@example.com"
+        label={t('auth.emailLabel')}
+        placeholder={t('auth.emailPlaceholder')}
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -92,29 +167,86 @@ export default function LoginScreen() {
         autoComplete="email"
         error={error}
       />
-      <Button title="Send sign-in email" onPress={handleLogin} loading={loading} variant="secondary" />
-      {__DEV__ ? (
-        <Button
-          title="Preview UI only (no saving)"
-          variant="secondary"
-          onPress={() => {
-            enterBuildMode();
-            router.replace('/(tabs)');
-          }}
-          style={styles.skip}
-        />
-      ) : null}
-      {!isSupabaseConfigured && (
-        <Text style={[styles.hint, { color: colors.error }]}>
-          Supabase is not configured in .env — emails will not be sent until you add your API keys.
-        </Text>
+
+      {!isGuest && usePasswordSignIn ? (
+        <>
+          <Input
+            label={t('auth.passwordLabel')}
+            placeholder={t('auth.passwordPlaceholder')}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            autoComplete="password"
+            textContentType="password"
+            onSubmitEditing={() => void handlePasswordSignIn()}
+          />
+          <Button
+            title={t('auth.signInWithPassword')}
+            onPress={() => void handlePasswordSignIn()}
+            loading={passwordLoading}
+          />
+          <View style={styles.linkRow}>
+            <Pressable onPress={() => void handleForgotPassword()} disabled={resetLoading}>
+              <Text style={[styles.link, { color: colors.primary, opacity: resetLoading ? 0.5 : 1 }]}>
+                {t('auth.forgotPassword')}
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => setUsePasswordSignIn(false)}>
+              <Text style={[styles.link, { color: colors.primary }]}>{t('auth.useEmailCodeInstead')}</Text>
+            </Pressable>
+          </View>
+        </>
+      ) : (
+        <>
+          <Button
+            title={isGuest ? t('auth.linkEmailButton') : t('auth.sendSignInEmail')}
+            onPress={() => void handleEmailSignIn()}
+            loading={emailLoading}
+            variant={isGuest ? 'primary' : 'secondary'}
+          />
+          {!isGuest ? (
+            <Pressable onPress={() => setUsePasswordSignIn(true)} style={styles.modeToggle}>
+              <Text style={[styles.link, { color: colors.primary }]}>{t('auth.usePasswordInstead')}</Text>
+            </Pressable>
+          ) : null}
+        </>
       )}
+
+      {__DEV__ ? (
+        <>
+          <Text style={[styles.hint, { color: colors.textSecondary }]}>{t('auth.redirectHint')}</Text>
+          <Pressable onPress={copyRedirect} style={styles.redirectBox}>
+            <Text style={[styles.redirectUrl, { color: colors.primary }]} selectable>
+              {redirectUrl}
+            </Text>
+          </Pressable>
+        </>
+      ) : null}
+
+      {!isSupabaseConfigured ? (
+        <Text style={[styles.hint, { color: colors.error }]}>{t('auth.supabaseNotConfiguredInline')}</Text>
+      ) : null}
     </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
+  recommend: { fontSize: 14, lineHeight: 21, marginBottom: spacing.md, textAlign: 'center' },
+  guestNote: { fontSize: 13, lineHeight: 19, marginBottom: spacing.sm, textAlign: 'center' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: spacing.md, gap: spacing.sm },
+  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth },
+  divider: { fontSize: 13, textAlign: 'center' },
+  linkRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  link: { fontSize: 13, lineHeight: 18 },
+  modeToggle: { marginTop: spacing.sm, alignItems: 'center' },
   hint: { fontSize: 13, textAlign: 'center', marginTop: spacing.md, lineHeight: 18 },
-  divider: { fontSize: 13, textAlign: 'center', marginVertical: spacing.md },
-  skip: { marginTop: spacing.sm },
+  redirectBox: { marginTop: spacing.xs, marginBottom: spacing.sm, paddingHorizontal: spacing.sm },
+  redirectUrl: { fontSize: 11, textAlign: 'center', lineHeight: 16 },
 });

@@ -1,93 +1,140 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Linking, Platform, StyleSheet, Text } from 'react-native';
 import { AuthShell } from '@/components/AuthShell';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
-import Colors from '@/constants/Colors';
-import { sendEmailOtp } from '@/lib/auth';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { messageFromAuthError } from '@/lib/auth-errors';
+import {
+  resendEmailSignIn,
+  resolveSignInEmail,
+  verifyEmailSignIn,
+} from '@/lib/email-sign-in';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { useThemeTokens } from '@/theme';
+
+const RESEND_COOLDOWN_SEC = 60;
+const CODE_LENGTH = 6;
 
 export default function VerifyOtpScreen() {
-  const { email } = useLocalSearchParams<{ email: string }>();
+  const { email: emailParam } = useLocalSearchParams<{ email?: string }>();
+  const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resendIn, setResendIn] = useState(RESEND_COOLDOWN_SEC);
   const [error, setError] = useState('');
+  const verifyingRef = useRef(false);
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { t } = useTranslation();
+  const { colors } = useThemeTokens();
 
-  const handleVerify = async () => {
-    if (!token.trim()) {
-      setError('Enter the 6-digit code from your email');
-      return;
-    }
-    if (!isSupabaseConfigured) {
-      setError('Configure Supabase in .env first.');
-      return;
-    }
-    setError('');
-    setLoading(true);
-
-    const { error: authError } = await supabase.auth.verifyOtp({
-      email: email ?? '',
-      token: token.trim(),
-      type: 'email',
+  useEffect(() => {
+    void resolveSignInEmail(typeof emailParam === 'string' ? emailParam : null).then((resolved) => {
+      if (resolved) {
+        setEmail(resolved);
+        return;
+      }
+      router.replace('/(auth)/login');
     });
+  }, [emailParam, router]);
 
-    setLoading(false);
-    if (authError) {
-      setError(authError.message);
-      return;
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = setInterval(() => {
+      setResendIn((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendIn]);
+
+  const handleVerify = useCallback(
+    async (code: string) => {
+      if (verifyingRef.current) return;
+      const trimmed = code.trim();
+      if (!trimmed) {
+        setError(t('auth.enterCodeError'));
+        return;
+      }
+      if (!isSupabaseConfigured || !email) {
+        setError(t('auth.configureSupabaseFirst'));
+        return;
+      }
+
+      verifyingRef.current = true;
+      setError('');
+      setLoading(true);
+
+      const { error: authError } = await verifyEmailSignIn(email, trimmed);
+
+      setLoading(false);
+      verifyingRef.current = false;
+
+      if (authError) {
+        setError(messageFromAuthError(authError));
+        return;
+      }
+
+      router.replace('/(tabs)');
+    },
+    [email, router, t]
+  );
+
+  useEffect(() => {
+    if (token.length === CODE_LENGTH && /^\d+$/.test(token)) {
+      void handleVerify(token);
     }
-    router.replace('/(tabs)');
-  };
+  }, [token, handleVerify]);
 
   const handleResend = async () => {
-    if (!email || !isSupabaseConfigured) return;
+    if (!email || !isSupabaseConfigured || resendIn > 0) return;
     setResending(true);
     setError('');
-    const { error: authError } = await sendEmailOtp(email);
+    const { error: authError } = await resendEmailSignIn(email);
     setResending(false);
     if (authError) {
-      const msg = authError.message;
-      setError(
-        /rate limit/i.test(msg)
-          ? 'Too many emails sent. Wait ~1 hour before resend. Use a code from an earlier email if you have one.'
-          : msg
-      );
+      setError(messageFromAuthError(authError));
+      return;
     }
-    else setError('');
+    setResendIn(RESEND_COOLDOWN_SEC);
   };
 
+  const openEmailApp = () => {
+    void Linking.openURL(Platform.OS === 'ios' ? 'message://' : 'mailto:');
+  };
+
+  if (!email) return null;
+
   return (
-    <AuthShell title="Check your email" subtitle={`We sent a sign-in message to ${email ?? 'your inbox'}`}>
-      <Text style={[styles.help, { color: colors.textSecondary }]}>
-        If your email has a 6-digit code, enter it below. If it has a “Sign in” link, tap that link instead (it opens
-        this app).
-      </Text>
+    <AuthShell title={t('auth.verifyTitle')} subtitle={t('auth.verifySubtitle', { email })} keyboard>
+      <Text style={[styles.help, { color: colors.textSecondary }]}>{t('auth.verifyHelp')}</Text>
       <Input
-        label="6-digit code (if shown in email)"
-        placeholder="123456"
+        label={t('auth.codeLabel')}
+        placeholder={t('auth.codePlaceholder')}
         value={token}
-        onChangeText={setToken}
+        onChangeText={(value) => setToken(value.replace(/\D/g, '').slice(0, CODE_LENGTH))}
         keyboardType="number-pad"
-        maxLength={8}
+        maxLength={CODE_LENGTH}
         error={error}
+        autoFocus
       />
-      <Button title="Verify code" onPress={handleVerify} loading={loading} />
-      <Button title="Resend email" onPress={handleResend} loading={resending} variant="secondary" />
-      <Text style={[styles.backHint, { color: colors.textSecondary }]}>
-        Wrong email? Use ← Back above, then enter a different address.
-      </Text>
-      <Text style={[styles.tip, { color: colors.textSecondary }]}>
-        No email today? Open Supabase → Authentication → Logs after you tap Resend. Free email is limited
-        (~2/hour). Add <Text style={styles.mono}>{'{{ .Token }}'}</Text> to the Magic Link template for a
-        code, or use custom SMTP — see docs/EMAIL_AUTH_TROUBLESHOOTING.md in the project.
-      </Text>
+      <Button title={t('auth.verifyCode')} onPress={() => void handleVerify(token)} loading={loading} />
+      <Button
+        title={resendIn > 0 ? t('auth.resendWait', { seconds: resendIn }) : t('auth.resendEmail')}
+        onPress={() => void handleResend()}
+        loading={resending}
+        disabled={resendIn > 0}
+        variant="secondary"
+      />
+      <Button title={t('auth.openEmailApp')} onPress={openEmailApp} variant="secondary" />
+      <Button
+        title={t('auth.backToSignIn')}
+        onPress={() => router.replace('/(auth)/login')}
+        variant="secondary"
+      />
+      <Text style={[styles.backHint, { color: colors.textSecondary }]}>{t('auth.wrongEmailHint')}</Text>
+      <Text style={[styles.tip, { color: colors.textSecondary }]}>{t('auth.noEmailTip')}</Text>
     </AuthShell>
   );
 }
@@ -96,5 +143,4 @@ const styles = StyleSheet.create({
   help: { fontSize: 14, lineHeight: 20, marginBottom: spacing.md },
   backHint: { fontSize: 13, textAlign: 'center', marginTop: spacing.md, lineHeight: 18 },
   tip: { fontSize: 12, lineHeight: 18, marginTop: spacing.lg, textAlign: 'center' },
-  mono: { fontFamily: 'SpaceMono', fontSize: 11 },
 });

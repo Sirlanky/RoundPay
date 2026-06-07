@@ -95,7 +95,6 @@ export default function JoinGroupScreen() {
   };
 
   const canJoin =
-    !!user &&
     !!preview &&
     preview.member_count < preview.max_members &&
     isValidInviteCode(inviteCode);

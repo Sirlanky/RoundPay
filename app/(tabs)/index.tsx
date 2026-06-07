@@ -1,49 +1,73 @@
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useNavigation, useRouter } from 'expo-router';
+import { useLayoutEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
-import { EmptyState } from '@/components/EmptyState';
-import { GroupCard } from '@/components/GroupCard';
+import {
+  HomeGroupSwitcher,
+  HomeHeader,
+  HomeHeroCard,
+  HomeNextPayoutCard,
+  HomeNoActiveEmpty,
+  HomeNoGroupsEmpty,
+  HomeQuickActions,
+  HomeRecentActivity,
+  HomeStatusStrip,
+} from '@/components/home';
+import { ProfileSetupBanner } from '@/components/ProfileSetupBanner';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors, { brand } from '@/constants/Colors';
-import { getUserGroups } from '@/lib/groups';
-import type { AjoGroup } from '@/lib/types';
+import { useHomeDashboard } from '@/hooks/useHomeDashboard';
+import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { spacing } from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 
 export default function HomeScreen() {
   const { user, profile } = useAuth();
-  const [groups, setGroups] = useState<AjoGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
+  const {
+    dashboard,
+    loading,
+    loadError,
+    refreshing,
+    onRefresh,
+    selectGroup,
+    hasGroups,
+    hasPrimary,
+    groupId,
+    isDraft,
+    showPayNow,
+    showViewPayments,
+    showAdminPayments,
+  } = useHomeDashboard(user?.id);
   const router = useRouter();
+  const navigation = useNavigation();
+  const { t } = useTranslation();
   const scheme = useColorScheme() ?? 'light';
   const colors = Colors[scheme];
 
-  const load = useCallback(async () => {
-    if (!user) {
-      setGroups([]);
-      setLoadError('');
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoadError('');
-      const data = await getUserGroups(user.id);
-      setGroups(data as AjoGroup[]);
-    } catch (e) {
-      setLoadError(e instanceof Error ? e.message : 'Could not load groups');
-      setGroups([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  const isEmptyHome = !hasPrimary;
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerTitle: isEmptyHome ? '' : t('nav.home') });
+  }, [navigation, isEmptyHome, t]);
+
+  const goToInvite = () => {
+    if (groupId) router.push(`/group/${groupId}/invite`);
+  };
+
+  const goToSchedule = () => {
+    if (groupId) router.push(`/group/${groupId}/schedule`);
+  };
+
+  const goToDetails = () => {
+    if (groupId) router.push(`/group/${groupId}`);
+  };
+
+  const goToPay = () => {
+    if (!groupId || !dashboard?.userPendingContributionId) return;
+    if (!promptProfileSetupForTransfer(profile, router, t)) return;
+    router.push(`/group/${groupId}/pay?contributionId=${dashboard.userPendingContributionId}`);
+  };
 
   if (loading) {
     return (
@@ -53,42 +77,60 @@ export default function HomeScreen() {
     );
   }
 
-  const activeGroups = groups.filter((g) => g.status === 'active');
-  const firstName = profile?.full_name?.split(' ')[0] ?? 'there';
-
   return (
     <Screen
       safeArea={false}
+      tabBarInset
       refreshing={refreshing}
-      onRefresh={async () => {
-        setRefreshing(true);
-        await load();
-        setRefreshing(false);
-      }}
+      onRefresh={onRefresh}
       contentStyle={styles.content}>
-      <Text style={[styles.greeting, { color: colors.textSecondary }]}>Welcome back</Text>
-      <Text style={[styles.name, { color: colors.text }]}>{firstName}</Text>
-      <Text style={[styles.stats, { color: colors.textSecondary }]}>
-        {activeGroups.length} active · {groups.length} total groups
-      </Text>
+      <HomeHeader profile={profile} user={user} variant={isEmptyHome ? 'welcome' : 'dashboard'} />
 
-      {loadError ? (
-        <Text style={[styles.error, { color: colors.error }]}>{loadError}</Text>
-      ) : null}
+      <ProfileSetupBanner profile={profile} />
 
-      <View style={styles.actions}>
-        <Button title="Create group" onPress={() => router.push('/group/create')} style={styles.actionBtn} />
-        <Button title="Join group" onPress={() => router.push('/group/join')} variant="secondary" style={styles.actionBtn} />
-      </View>
+      {loadError ? <Text style={[styles.error, { color: colors.error }]}>{loadError}</Text> : null}
 
-      <Text style={[styles.section, { color: colors.text }]}>Your groups</Text>
-      {groups.length === 0 ? (
-        <EmptyState
-          title="No groups yet"
-          message="Start an Ajo with friends or join one using an invite code."
+      {!hasGroups ? (
+        <HomeNoGroupsEmpty
+          onCreate={() => router.push('/group/create')}
+          onJoin={() => router.push('/group/join')}
         />
       ) : (
-        groups.map((g) => <GroupCard key={g.id} group={g} />)
+        <>
+          {hasPrimary && dashboard && groupId ? (
+            <>
+              <HomeGroupSwitcher
+                groups={dashboard.inProgressGroups}
+                selectedId={groupId}
+                onSelect={selectGroup}
+              />
+              <HomeHeroCard data={dashboard} onPress={goToDetails} />
+              <HomeNextPayoutCard data={dashboard} />
+              <HomeStatusStrip data={dashboard} onViewPayments={goToDetails} />
+              <HomeQuickActions
+                groupId={groupId}
+                isDraft={!!isDraft}
+                showPayNow={showPayNow}
+                showViewPayments={showViewPayments}
+                showAdminPayments={showAdminPayments}
+                onInvite={goToInvite}
+                onSchedule={goToSchedule}
+                onDetails={goToDetails}
+                onPay={goToPay}
+                onViewPayments={goToDetails}
+              />
+              {dashboard.recentActivity.length > 0 ? (
+                <HomeRecentActivity activities={dashboard.recentActivity} />
+              ) : null}
+            </>
+          ) : (
+            <HomeNoActiveEmpty
+              onCreate={() => router.push('/group/create')}
+              onJoin={() => router.push('/group/join')}
+              onViewGroups={() => router.push('/(tabs)/groups')}
+            />
+          )}
+        </>
       )}
     </Screen>
   );
@@ -96,12 +138,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { paddingTop: spacing.sm },
-  greeting: { fontSize: 15 },
-  name: { fontSize: 28, fontWeight: '800', marginTop: 2 },
-  stats: { fontSize: 14, marginTop: spacing.xs, marginBottom: spacing.lg },
+  content: { paddingTop: spacing.sm, paddingBottom: spacing.xl },
   error: { fontSize: 14, marginBottom: spacing.md, lineHeight: 20 },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
-  actionBtn: { flex: 1, marginVertical: 0 },
-  section: { fontSize: 18, fontWeight: '600', marginBottom: spacing.md },
 });

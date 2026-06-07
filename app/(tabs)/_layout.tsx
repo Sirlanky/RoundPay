@@ -1,61 +1,48 @@
-import { SymbolView } from 'expo-symbols';
 import { Tabs } from 'expo-router';
-import Colors, { brand } from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
+import { StyleSheet } from 'react-native';
+import { RoundPayTabBar } from '@/components/navigation/RoundPayTabBar';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/contexts/LanguageContext';
+import { NotificationsProvider } from '@/contexts/NotificationsContext';
+import { typography, useThemeTokens } from '@/theme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const colors = Colors[colorScheme];
+  const { user } = useAuth();
+
+  return (
+    <NotificationsProvider userId={user?.id}>
+      <TabLayoutInner />
+    </NotificationsProvider>
+  );
+}
+
+function TabLayoutInner() {
+  const { t } = useTranslation();
+  const { colors } = useThemeTokens();
 
   return (
     <Tabs
+      tabBar={(props) => <RoundPayTabBar {...props} />}
       screenOptions={{
         headerShown: true,
         headerStyle: { backgroundColor: colors.background },
-        headerTitleStyle: { fontWeight: '700', fontSize: 17, color: colors.text },
+        headerTitleStyle: [styles.headerTitle, typography.headingSmall, { color: colors.textPrimary }],
+        headerTitleAlign: 'center',
         headerShadowVisible: false,
-        tabBarActiveTintColor: brand.primary,
-        tabBarInactiveTintColor: colors.tabIconDefault,
-        tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
-        },
+        tabBarHideOnKeyboard: true,
+        sceneStyle: { backgroundColor: colors.background },
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'house.fill', android: 'home', web: 'home' }} tintColor={color} size={24} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="groups"
-        options={{
-          title: 'Groups',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'person.3.fill', android: 'group', web: 'group' }}
-              tintColor={color}
-              size={24}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'person.circle.fill', android: 'person', web: 'person' }}
-              tintColor={color}
-              size={24}
-            />
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: t('nav.home') }} />
+      <Tabs.Screen name="groups" options={{ title: t('nav.groups') }} />
+      <Tabs.Screen name="contributions" options={{ title: t('nav.contributions') }} />
+      <Tabs.Screen name="notifications" options={{ title: t('nav.alerts') }} />
+      <Tabs.Screen name="profile" options={{ title: t('nav.profile') }} />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerTitle: {
+    fontWeight: '700',
+  },
+});

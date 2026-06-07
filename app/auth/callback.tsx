@@ -1,24 +1,29 @@
-import { useRouter } from 'expo-router';
+import { useGlobalSearchParams, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { brand } from '@/constants/Colors';
 import { createSessionFromUrl } from '@/lib/auth';
+import { getPendingSignInEmail } from '@/lib/pending-sign-in-email';
+import { callbackUrlFromParams, urlHasAuthParams } from '@/lib/redirect';
 import { spacing } from '@/constants/theme';
 
 export default function AuthCallbackScreen() {
   const router = useRouter();
-  const [message, setMessage] = useState('Signing you in…');
+  const params = useGlobalSearchParams<Record<string, string | string[]>>();
+  const { t } = useTranslation();
+  const [message, setMessage] = useState(t('auth.callbackSigningIn'));
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     const run = async (url: string | null) => {
-      if (!url) {
+      if (!url || !urlHasAuthParams(url)) {
         setFailed(true);
-        setMessage('No sign-in data in this link. Open the app from the email again, or enter your 6-digit code.');
+        setMessage(t('auth.callbackNoData'));
         return;
       }
       const result = await createSessionFromUrl(url);
@@ -28,28 +33,53 @@ export default function AuthCallbackScreen() {
         return;
       }
       setFailed(true);
-      setMessage(result.error ?? 'Sign-in link expired or invalid.');
+      setMessage(result.error ?? t('auth.callbackFailed'));
     };
 
-    Linking.getInitialURL().then(run);
+    const resolve = async () => {
+      const initial = await Linking.getInitialURL();
+      if (initial && urlHasAuthParams(initial)) {
+        await run(initial);
+        return;
+      }
+      const fromRoute = callbackUrlFromParams(params);
+      await run(fromRoute ?? initial);
+    };
 
-    const sub = Linking.addEventListener('url', ({ url }) => run(url));
+    void resolve();
+
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      void run(url);
+    });
     return () => {
       cancelled = true;
       sub.remove();
     };
-  }, [router]);
+  }, [router, params, t]);
+
+  const goVerify = async () => {
+    const email = await getPendingSignInEmail();
+    if (email) {
+      router.replace({ pathname: '/(auth)/verify-otp', params: { email } });
+      return;
+    }
+    router.replace('/(auth)/verify-otp');
+  };
 
   return (
     <View style={styles.container}>
       {!failed ? <ActivityIndicator size="large" color={brand.primary} /> : null}
       <Text style={styles.text}>{message}</Text>
       {failed ? (
-        <Button
-          title="Back to sign in"
-          onPress={() => router.replace('/(auth)/login')}
-          style={styles.btn}
-        />
+        <>
+          <Button title={t('auth.verifyCode')} onPress={() => void goVerify()} style={styles.btn} />
+          <Button
+            title={t('auth.backToSignIn')}
+            onPress={() => router.replace('/(auth)/login')}
+            variant="secondary"
+            style={styles.btn}
+          />
+        </>
       ) : null}
     </View>
   );
@@ -64,5 +94,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAF9',
   },
   text: { marginTop: spacing.lg, fontSize: 15, textAlign: 'center', lineHeight: 22, color: '#334155' },
-  btn: { marginTop: spacing.xl, alignSelf: 'stretch' },
+  btn: { marginTop: spacing.md, alignSelf: 'stretch' },
 });

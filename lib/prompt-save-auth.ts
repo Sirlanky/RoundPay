@@ -8,7 +8,7 @@ type Options = {
 };
 
 /** Alert when a flow needs a saved account (create/join group). */
-export function promptSaveAuth({ action, onGuest, onSignIn, showGuest = __DEV__ }: Options) {
+export function promptSaveAuth({ action, onGuest, onSignIn, showGuest = true }: Options) {
   const buttons: {
     text: string;
     style?: 'cancel' | 'default';

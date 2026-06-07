@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendPushToUser } from '../_shared/push.ts';
 
 async function verifyPaystackSignature(body: string, signature: string | null): Promise<boolean> {
   const secret = Deno.env.get('PAYSTACK_SECRET_KEY') ?? '';
@@ -17,14 +18,6 @@ async function verifyPaystackSignature(body: string, signature: string | null): 
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
   return hash === signature;
-}
-
-async function sendPush(token: string, title: string, body: string) {
-  await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: token, title, body, sound: 'default' }),
-  });
 }
 
 Deno.serve(async (req) => {
@@ -78,15 +71,22 @@ Deno.serve(async (req) => {
           .eq('id', contribution.cycle_id);
       }
 
-      const { data: payerProfile } = await supabase
-        .from('profiles')
-        .select('expo_push_token')
-        .eq('id', contribution.user_id)
-        .single();
-
-      if (payerProfile?.expo_push_token) {
-        await sendPush(payerProfile.expo_push_token, 'Payment confirmed', 'Your contribution was received.');
-      }
+      const rawCycle = contribution.cycles as
+        | { id: string; group_id: string }
+        | { id: string; group_id: string }[]
+        | null;
+      const cycle = Array.isArray(rawCycle) ? rawCycle[0] ?? null : rawCycle;
+      await sendPushToUser(
+        supabase,
+        contribution.user_id,
+        'Payment confirmed',
+        'Your contribution was received.',
+        {
+          type: 'payment_confirmed',
+          groupId: cycle?.group_id,
+          relatedEntityId: contribution.id,
+        }
+      );
     }
   }
 

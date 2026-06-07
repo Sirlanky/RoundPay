@@ -1,3 +1,4 @@
+import { frequencyLabel } from './group-frequency';
 import type { GroupFrequency } from './types';
 
 const INVITE_CODE = /^[A-Z2-9]{6}$/;
@@ -37,6 +38,14 @@ export function validateCreateGroupInput(input: {
   return { ok: true, data: { name, contributionAmount, maxMembers, adminFeePercent } };
 }
 
+export function rosterIsComplete(memberCount: number, maxMembers: number): boolean {
+  return memberCount >= maxMembers;
+}
+
+export function membersStillNeeded(memberCount: number, maxMembers: number): number {
+  return Math.max(0, maxMembers - memberCount);
+}
+
 export function poolSummary(
   contributionAmount: number,
   maxMembers: number,
@@ -46,13 +55,9 @@ export function poolSummary(
   const gross = contributionAmount * maxMembers;
   const fee = Math.round((gross * adminFeePercent) / 100);
   const net = gross - fee;
-  return `${formatNairaShort(contributionAmount)} × ${maxMembers} members · ${frequencyLabel(frequency)} · pool ${formatNairaShort(net)}${fee > 0 ? ` (after ${adminFeePercent}% fee)` : ''}`;
+  return `${formatNairaShort(contributionAmount)} × ${maxMembers} members · ${frequencyLabel(frequency, { lowercase: true })} · pool ${formatNairaShort(net)}${fee > 0 ? ` (after ${adminFeePercent}% fee)` : ''}`;
 }
 
 function formatNairaShort(amount: number): string {
   return `₦${amount.toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
-}
-
-function frequencyLabel(frequency: GroupFrequency): string {
-  return frequency === 'weekly' ? 'weekly' : 'monthly';
 }

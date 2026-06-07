@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { isProfileReadyForTransfers } from '../_shared/profile-setup.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -35,9 +36,17 @@ Deno.serve(async (req) => {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('email')
+      .select(
+        'email, first_name, last_name, full_name, phone, account_number, paystack_recipient_code'
+      )
       .eq('id', user.id)
       .single();
+
+    if (!isProfileReadyForTransfers(profile)) {
+      throw new Error(
+        'Complete your profile (name, phone, and bank account) before making a payment.'
+      );
+    }
 
     const reference = `ajo_${contribution_id.slice(0, 8)}_${Date.now()}`;
     const groupName = (contribution as { cycles?: { groups?: { name?: string } } }).cycles?.groups?.name ?? 'Ajo Group';

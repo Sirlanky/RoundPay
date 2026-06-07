@@ -27,5 +27,23 @@ export function mapPaystackFunctionError(message: string): string {
   if (message === 'Paystack not configured') {
     return 'Paystack is not set up on the server. Add PAYSTACK_SECRET_KEY to Supabase Edge Function secrets.';
   }
+  if (message === 'Edge function not deployed' || message.includes('Request failed (404)')) {
+    return 'Payout will be recorded manually — Paystack transfer is not set up yet.';
+  }
+  if (message.includes('Complete your profile')) {
+    return 'Finish your profile setup (name, phone, and bank account) before making a payment.';
+  }
+  if (message.includes('Recipient has no bank account')) {
+    return 'Collector has no bank account on file. They must add one in Profile, or use Record payout sent.';
+  }
+  if (message.includes('Cycle must have all contributions paid') || message.includes('All members must pay')) {
+    return 'Everyone must pay before sending payout.';
+  }
+  if (message.includes('Not all contributions are paid')) {
+    return 'Not all contributions are marked paid yet.';
+  }
+  if (message.includes('record_cycle_payout') || message.includes('Could not find the function')) {
+    return 'Run supabase/migrations/RECORD_PAYOUT_FIX.sql in Supabase SQL Editor, then try again.';
+  }
   return message;
 }

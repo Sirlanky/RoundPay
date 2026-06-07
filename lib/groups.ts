@@ -1,7 +1,9 @@
+import { assertCanAdministerGroup } from './identity-verification';
 import { generateInviteCode } from './format';
+import { isFrequencyConstraintError, refreshSupportedGroupFrequencies } from './group-frequency-support';
 import { ensureProfile } from './profile';
 import { supabase } from './supabase';
-import type { AjoGroup, GroupFrequency } from './types';
+import type { AjoGroup, GroupFrequency, Profile } from './types';
 import type { User } from '@supabase/supabase-js';
 
 export async function createGroup(params: {
@@ -11,8 +13,12 @@ export async function createGroup(params: {
   maxMembers: number;
   adminFeePercent: number;
   adminUser: User;
+  adminProfile?: Pick<Profile, 'identity_status'> | null;
+  /** When false, admin organizes only and is not added to the rotation. Default true. */
+  adminParticipates?: boolean;
 }) {
   await ensureProfile(params.adminUser);
+  await assertCanAdministerGroup(params.adminUser.id, params.adminProfile ?? null);
 
   const inviteCode = generateInviteCode();
   const { data: group, error } = await supabase
@@ -30,14 +36,26 @@ export async function createGroup(params: {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (isFrequencyConstraintError(error)) {
+      await refreshSupportedGroupFrequencies();
+      throw new Error('FREQUENCY_NOT_SUPPORTED');
+    }
+    throw error;
+  }
 
-  await supabase.from('group_members').insert({
-    group_id: group.id,
-    user_id: params.adminUser.id,
-    rotation_order: 1,
-    role: 'admin',
-  });
+  if (params.adminParticipates !== false) {
+    const { error: memberError } = await supabase.from('group_members').insert({
+      group_id: group.id,
+      user_id: params.adminUser.id,
+      rotation_order: 1,
+      role: 'admin',
+    });
+    if (memberError) {
+      await supabase.from('groups').delete().eq('id', group.id);
+      throw memberError;
+    }
+  }
 
   return group;
 }
@@ -67,6 +85,14 @@ export async function previewGroupByInviteCode(inviteCode: string): Promise<Grou
 }
 
 export async function joinGroup(inviteCode: string, userId: string) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || user.id !== userId) {
+    throw new Error('You must be signed in to join a group');
+  }
+  await ensureProfile(user);
+
   const { data: group, error: groupError } = await supabase
     .from('groups')
     .select('*')
@@ -104,140 +130,60 @@ export async function joinGroup(inviteCode: string, userId: string) {
   return group;
 }
 
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function addMonths(date: Date, months: number): Date {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
-  return d;
+/** Join or leave the rotation as admin while the group is still in draft. */
+export async function setAdminParticipation(groupId: string, _adminUserId: string, participates: boolean) {
+  const { error } = await supabase.rpc('set_admin_participation', {
+    p_group_id: groupId,
+    p_participates: participates,
+  });
+  if (error) throw error;
 }
 
 export async function startGroup(groupId: string) {
-  const { data: group } = await supabase.from('groups').select('*').eq('id', groupId).single();
-  if (!group || group.status !== 'draft') throw new Error('Group cannot be started');
-
-  const { data: members } = await supabase
-    .from('group_members')
-    .select('*')
-    .eq('group_id', groupId)
-    .order('rotation_order');
-
-  if (!members || members.length < 2) throw new Error('Need at least 2 members to start');
-
-  const recipient = members[0];
-  const dueDate =
-    group.frequency === 'weekly'
-      ? addDays(new Date(), 7)
-      : addMonths(new Date(), 1);
+  const { data: cycleId, error } = await supabase.rpc('start_group', { p_group_id: groupId });
+  if (error) throw error;
 
   const { data: cycle, error: cycleError } = await supabase
     .from('cycles')
-    .insert({
-      group_id: groupId,
-      cycle_number: 1,
-      recipient_id: recipient.user_id,
-      due_date: dueDate.toISOString(),
-      status: 'collecting',
-    })
-    .select()
+    .select('*')
+    .eq('id', cycleId as string)
     .single();
 
   if (cycleError) throw cycleError;
-
-  const contributions = members.map((m) => ({
-    cycle_id: cycle.id,
-    member_id: m.id,
-    user_id: m.user_id,
-    amount: group.contribution_amount,
-    status: 'pending' as const,
-  }));
-
-  await supabase.from('contributions').insert(contributions);
-
-  await supabase
-    .from('groups')
-    .update({ status: 'active', current_cycle: 1 })
-    .eq('id', groupId);
-
   return cycle;
 }
 
 export async function advanceCycle(groupId: string) {
-  const { data: group } = await supabase.from('groups').select('*').eq('id', groupId).single();
-  if (!group) throw new Error('Group not found');
-
-  const { data: currentCycle } = await supabase
-    .from('cycles')
-    .select('*')
-    .eq('group_id', groupId)
-    .eq('cycle_number', group.current_cycle)
-    .single();
-
-  if (!currentCycle || currentCycle.status !== 'paid_out') {
-    throw new Error('Current cycle must be paid out before advancing');
-  }
-
-  const { data: members } = await supabase
-    .from('group_members')
-    .select('*')
-    .eq('group_id', groupId)
-    .order('rotation_order');
-
-  if (!members) throw new Error('No members');
-
-  const nextCycleNum = group.current_cycle + 1;
-  if (nextCycleNum > members.length) {
-    await supabase.from('groups').update({ status: 'completed' }).eq('id', groupId);
-    return null;
-  }
-
-  const recipient = members[nextCycleNum - 1];
-  const dueDate =
-    group.frequency === 'weekly'
-      ? addDays(new Date(), 7)
-      : addMonths(new Date(), 1);
-
-  const { data: cycle, error } = await supabase
-    .from('cycles')
-    .insert({
-      group_id: groupId,
-      cycle_number: nextCycleNum,
-      recipient_id: recipient.user_id,
-      due_date: dueDate.toISOString(),
-      status: 'collecting',
-    })
-    .select()
-    .single();
-
+  const { data: cycleId, error } = await supabase.rpc('advance_cycle', { p_group_id: groupId });
   if (error) throw error;
 
-  const contributions = members.map((m) => ({
-    cycle_id: cycle.id,
-    member_id: m.id,
-    user_id: m.user_id,
-    amount: group.contribution_amount,
-    status: 'pending' as const,
-  }));
+  if (cycleId == null) return null;
 
-  await supabase.from('contributions').insert(contributions);
-  await supabase.from('groups').update({ current_cycle: nextCycleNum }).eq('id', groupId);
+  const { data: cycle, error: cycleError } = await supabase
+    .from('cycles')
+    .select('*')
+    .eq('id', cycleId as string)
+    .single();
 
+  if (cycleError) throw cycleError;
   return cycle;
 }
 
 export async function getUserGroups(userId: string) {
-  const { data: memberships } = await supabase
-    .from('group_members')
-    .select('group_id')
-    .eq('user_id', userId);
+  const [{ data: memberships }, { data: adminGroups }] = await Promise.all([
+    supabase.from('group_members').select('group_id').eq('user_id', userId),
+    supabase.from('groups').select('id').eq('admin_id', userId),
+  ]);
 
-  if (!memberships?.length) return [];
+  const groupIds = [
+    ...new Set([
+      ...(memberships?.map((m) => m.group_id) ?? []),
+      ...(adminGroups?.map((g) => g.id) ?? []),
+    ]),
+  ];
 
-  const groupIds = memberships.map((m) => m.group_id);
+  if (!groupIds.length) return [];
+
   const { data: groups } = await supabase
     .from('groups')
     .select('*')
@@ -245,4 +191,86 @@ export async function getUserGroups(userId: string) {
     .order('updated_at', { ascending: false });
 
   return groups ?? [];
+}
+
+function isMissingDeleteRpc(error: { code?: string; message?: string }): boolean {
+  return (
+    error.code === 'PGRST202' ||
+    (error.message?.includes('delete_draft_group') ?? false) ||
+    (error.message?.includes('Could not find the function') ?? false)
+  );
+}
+
+/** Admin-only: permanently delete a group that has not started yet. */
+export async function deleteDraftGroup(groupId: string) {
+  const { error } = await supabase.rpc('delete_draft_group', { p_group_id: groupId });
+
+  if (!error) return;
+
+  if (isMissingDeleteRpc(error)) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data: group, error: fetchErr } = await supabase
+      .from('groups')
+      .select('id, admin_id, status')
+      .eq('id', groupId)
+      .single();
+
+    if (fetchErr || !group) throw fetchErr ?? new Error('Group not found');
+    if (group.admin_id !== user.id) throw new Error('Only the admin can delete this group');
+    if (group.status !== 'draft') throw new Error('Only draft groups can be deleted');
+
+    const { error: deleteErr } = await supabase.from('groups').delete().eq('id', groupId);
+    if (deleteErr) throw deleteErr;
+    return;
+  }
+
+  throw error;
+}
+
+export async function updateDraftGroupSettings(
+  groupId: string,
+  patch: {
+    name?: string;
+    contributionAmount?: number;
+    frequency?: GroupFrequency;
+    maxMembers?: number;
+  },
+  opts?: { currentMemberCount?: number }
+) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: group, error: fetchErr } = await supabase
+    .from('groups')
+    .select('id, admin_id, status')
+    .eq('id', groupId)
+    .single();
+
+  if (fetchErr || !group) throw fetchErr ?? new Error('Group not found');
+  if (group.admin_id !== user.id) throw new Error('Only the admin can edit this group');
+  if (group.status !== 'draft') throw new Error('Only draft groups can be edited');
+
+  if (patch.maxMembers != null && opts?.currentMemberCount != null && patch.maxMembers < opts.currentMemberCount) {
+    throw new Error(`Max members cannot be less than ${opts.currentMemberCount} (already joined)`);
+  }
+
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.name != null) updates.name = patch.name.trim();
+  if (patch.contributionAmount != null) updates.contribution_amount = patch.contributionAmount;
+  if (patch.frequency != null) updates.frequency = patch.frequency;
+  if (patch.maxMembers != null) updates.max_members = patch.maxMembers;
+
+  const { data, error } = await supabase.from('groups').update(updates).eq('id', groupId).select().single();
+  if (error) {
+    if (isFrequencyConstraintError(error)) {
+      await refreshSupportedGroupFrequencies();
+      throw new Error('FREQUENCY_NOT_SUPPORTED');
+    }
+    throw error;
+  }
+  return data as AjoGroup;
 }

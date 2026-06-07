@@ -34,3 +34,6 @@ verify_jwt = false
 
 [functions.send-reminders]
 verify_jwt = false
+
+[functions.dispatch-push]
+verify_jwt = false

@@ -1,15 +1,23 @@
+import 'react-native-reanimated';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, type Href } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import 'react-native-reanimated';
 
+import { AppLockGate } from '@/components/AppLockGate';
+import { PushNotificationHandler } from '@/components/PushNotificationHandler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { brand } from '@/constants/Colors';
+import { TransactionPinProvider } from '@/contexts/TransactionPinContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { brand } from '@/theme/colors';
+import { useThemeTokens } from '@/theme';
 import { createSessionFromUrl } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -23,6 +31,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, loading, configured, buildMode } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const lastNavRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handleUrl = async (url: string) => {
@@ -51,30 +60,65 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-    const root = segments[0];
-    const inAuth = root === '(auth)';
 
-    if (!configured) {
-      if (root !== '(auth)' || segments[1] !== 'setup') router.replace('/(auth)/setup');
-      return;
-    }
+    let cancelled = false;
 
-    if (!session && !buildMode && root !== '(auth)') {
-      router.replace('/(auth)/login');
-    } else if ((session || buildMode) && inAuth) {
-      router.replace('/(tabs)');
-    }
+    void (async () => {
+      const root = segments[0];
+      const inAuthGroup = root === '(auth)';
+      const inAuthCallback = root === 'auth';
+
+      let hasSession = Boolean(session);
+      if (!hasSession && configured) {
+        const { data: { session: stored } } = await supabase.auth.getSession();
+        if (cancelled) return;
+        hasSession = Boolean(stored);
+      }
+
+      let target: Href | null = null;
+      const authScreen = segments[1];
+      const isAnonymous = session?.user?.is_anonymous === true;
+      const onLogin = inAuthGroup && authScreen === 'login';
+      const onVerifyOtp = inAuthGroup && authScreen === 'verify-otp';
+      // Keep login for guests linking email; keep verify until OTP completes (guest or signed-out).
+      const stayForEmailAuth =
+        (onLogin && isAnonymous) || (onVerifyOtp && (!hasSession || isAnonymous));
+
+      if (!configured) {
+        if (!inAuthGroup || segments[1] !== 'setup') target = '/(auth)/setup';
+      } else if (!hasSession && !buildMode && !inAuthGroup && !inAuthCallback) {
+        target = '/(auth)/login';
+      } else if ((hasSession || buildMode) && inAuthGroup) {
+        if (!stayForEmailAuth && (buildMode || hasSession)) {
+          target = '/(tabs)';
+        }
+      }
+
+      if (target && lastNavRef.current !== target) {
+        lastNavRef.current = target as string;
+        router.replace(target);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [session, loading, configured, buildMode, segments, router]);
 
   if (loading) {
-    return (
-      <View style={styles.boot}>
-        <ActivityIndicator size="large" color={brand.primary} />
-      </View>
-    );
+    return <BootScreen />;
   }
 
   return <>{children}</>;
+}
+
+function BootScreen() {
+  const { colors } = useThemeTokens();
+  return (
+    <View style={[styles.boot, { backgroundColor: colors.background }]}>
+      <ActivityIndicator size="large" color={brand.primary} />
+    </View>
+  );
 }
 
 export default function RootLayout() {
@@ -83,38 +127,54 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (error) throw error;
+    if (error) {
+      console.warn('[fonts] SpaceMono failed to load:', error);
+    }
   }, [error]);
 
   useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
-  }, [loaded]);
+    if (loaded || error) {
+      void SplashScreen.hideAsync();
+    }
+  }, [loaded, error]);
 
-  if (!loaded) {
-    return (
-      <View style={styles.boot}>
-        <ActivityIndicator size="large" color={brand.primary} />
-      </View>
-    );
+  // SpaceMono is optional (OTP debug text only) — do not block the app on fonts.
+  if (!loaded && !error) {
+    return <BootScreen />;
   }
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <AuthGate>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="group" />
-            <Stack.Screen name="profile" />
-            <Stack.Screen name="auth" />
-            <Stack.Screen name="join" />
-            <Stack.Screen name="index" />
-          </Stack>
-        </AuthGate>
-      </AuthProvider>
+      <ThemeProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <TransactionPinProvider>
+              <AuthGate>
+                <AppLockGate>
+                  <PushNotificationHandler />
+                  <RootStatusBar />
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="group" />
+                    <Stack.Screen name="profile" />
+                    <Stack.Screen name="auth" />
+                    <Stack.Screen name="join/[code]" />
+                    <Stack.Screen name="index" />
+                  </Stack>
+                </AppLockGate>
+              </AuthGate>
+            </TransactionPinProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
+}
+
+function RootStatusBar() {
+  const { colorScheme } = useTheme();
+  return <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />;
 }
 
 const styles = StyleSheet.create({
@@ -122,6 +182,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAF9',
   },
 });

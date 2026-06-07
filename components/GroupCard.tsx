@@ -1,46 +1,78 @@
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { StatusBadge } from './StatusBadge';
-import { useColorScheme } from './useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { StatusBadge, Text } from '@/components/ui';
 import { formatNaira, frequencyLabel } from '@/lib/format';
 import type { AjoGroup } from '@/lib/types';
-import { radius, spacing } from '@/constants/theme';
+import { spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   group: AjoGroup;
+  variant?: 'default' | 'history';
+  compact?: boolean;
+  onNavigate?: () => void;
 }
 
-export function GroupCard({ group }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+export function GroupCard({ group, variant = 'default', compact = false, onNavigate }: Props) {
+  const { colors, radius } = useThemeTokens();
+  const isHistory = variant === 'history' || group.status === 'completed';
+  const isDraft = group.status === 'draft';
+
+  const metaLine = isHistory
+    ? `${frequencyLabel(group.frequency)} · ${group.current_cycle > 0 ? `${group.current_cycle} cycles` : 'Finished'}`
+    : `${frequencyLabel(group.frequency)}${group.current_cycle > 0 ? ` · Cycle ${group.current_cycle}` : ''}`;
 
   return (
     <Link href={`/group/${group.id}`} asChild>
       <Pressable
+        onPress={onNavigate}
         style={({ pressed }) => [
           styles.card,
+          compact && styles.cardCompact,
+          isHistory && styles.cardHistory,
           {
-            backgroundColor: colors.card,
+            backgroundColor: colors.surface,
             borderColor: colors.border,
+            borderRadius: radius.md,
             opacity: pressed ? 0.92 : 1,
           },
         ]}>
         <View style={styles.header}>
-          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+          <Text
+            variant={compact ? 'bodyLarge' : 'headingSmall'}
+            numberOfLines={1}
+            style={isHistory ? styles.nameHistory : styles.name}>
             {group.name}
           </Text>
-          <StatusBadge status={group.status} />
+          {!compact ? <StatusBadge status={group.status} /> : null}
         </View>
-        <Text style={[styles.amount, { color: brand.primary }]}>{formatNaira(group.contribution_amount)}</Text>
-        <Text style={[styles.meta, { color: colors.textSecondary }]}>
-          {frequencyLabel(group.frequency)}
-          {group.current_cycle > 0 ? ` · Cycle ${group.current_cycle}` : ''}
+        <Text
+          variant="money"
+          color="accent"
+          style={compact ? styles.amountCompact : styles.amount}>
+          {formatNaira(group.contribution_amount)}
         </Text>
-        <View style={[styles.codeRow, { backgroundColor: colors.background }]}>
-          <Text style={[styles.codeLabel, { color: colors.textSecondary }]}>Invite code</Text>
-          <Text style={[styles.code, { color: colors.text }]}>{group.invite_code}</Text>
-        </View>
+        {!compact ? (
+          <Text variant="caption" color="secondary" style={styles.meta}>
+            {metaLine}
+          </Text>
+        ) : null}
+
+        {!compact && isDraft ? (
+          <View style={[styles.codeRow, { backgroundColor: colors.surfaceSecondary, borderRadius: radius.sm }]}>
+            <Text variant="caption" color="secondary">
+              Invite code
+            </Text>
+            <Text variant="bodySmall" style={{ fontWeight: '700', letterSpacing: 1 }}>
+              {group.invite_code}
+            </Text>
+          </View>
+        ) : null}
+
+        {!compact && isHistory ? (
+          <Text variant="caption" color="secondary" style={styles.historyNote}>
+            Tap to view summary
+          </Text>
+        ) : null}
       </Pressable>
     </Link>
   );
@@ -48,23 +80,24 @@ export function GroupCard({ group }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radius.md,
     padding: spacing.md,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     borderWidth: 1,
   },
+  cardCompact: { paddingVertical: spacing.sm + 2 },
+  cardHistory: { paddingVertical: spacing.sm + 2 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  name: { fontSize: 17, fontWeight: '600', flex: 1 },
-  amount: { fontSize: 22, fontWeight: '700', marginTop: spacing.sm },
-  meta: { fontSize: 13, marginTop: 4 },
+  name: { flex: 1 },
+  nameHistory: { flex: 1, fontSize: 16 },
+  amount: { marginTop: spacing.sm },
+  amountCompact: { marginTop: 2, fontSize: 17, fontWeight: '800', lineHeight: 34 },
+  meta: { marginTop: 4 },
   codeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: spacing.md,
     padding: spacing.sm,
-    borderRadius: radius.sm,
   },
-  codeLabel: { fontSize: 12 },
-  code: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },
+  historyNote: { marginTop: spacing.sm },
 });

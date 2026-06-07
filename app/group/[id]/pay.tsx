@@ -1,39 +1,112 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Button } from '@/components/Button';
-import { Screen } from '@/components/Screen';
-import Colors, { brand } from '@/constants/Colors';
-import { createContributionPayment } from '@/lib/paystack';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { Button, Card, Text } from '@/components/ui';
+import { Screen } from '@/components/ui/Screen';
+import { ProfileSetupBanner } from '@/components/ProfileSetupBanner';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/contexts/LanguageContext';
+import { useTransactionPin } from '@/contexts/TransactionPinContext';
+import { mapPaystackFunctionError } from '@/lib/auth-session';
+import { getContribution } from '@/lib/contributions';
+import { formatNaira } from '@/lib/format';
+import { createContributionPayment, isPaystackConfigured } from '@/lib/paystack';
+import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
+import { isProfileReadyForTransfers } from '@/lib/profile-setup';
+import { spacing, useThemeTokens } from '@/theme';
+
+const CALLBACK_PATTERNS = ['payment-callback', 'ajoesusu://', 'roundpay://'];
+
+async function waitForPaidStatus(contributionId: string, attempts = 10): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    const row = await getContribution(contributionId);
+    if (row.status === 'paid') return true;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  return false;
+}
 
 export default function PayScreen() {
+  const { profile } = useAuth();
+  const { t } = useTranslation();
+  const { requestTransactionPin } = useTransactionPin();
   const { contributionId } = useLocalSearchParams<{ contributionId: string }>();
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(true);
+  const [amount, setAmount] = useState<number | null>(null);
+  const [groupName, setGroupName] = useState('');
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
+  const handledCallbackRef = useRef(false);
+
+  useEffect(() => {
+    if (!contributionId) return;
+    setLoadingDetails(true);
+    getContribution(contributionId)
+      .then((row) => {
+        const cycles = row.cycles as {
+          groups?: { name?: string; contribution_amount?: number };
+        } | null;
+        setAmount(row.amount);
+        setGroupName(cycles?.groups?.name ?? 'Ajo group');
+      })
+      .catch(() => {
+        Alert.alert('Error', 'Could not load payment details.');
+        router.back();
+      })
+      .finally(() => setLoadingDetails(false));
+  }, [contributionId, router]);
 
   const startPayment = async () => {
     if (!contributionId) return;
+    if (!promptProfileSetupForTransfer(profile, router, t)) return;
+    if (!(await requestTransactionPin())) return;
+    if (!isPaystackConfigured()) {
+      Alert.alert(
+        'Paystack not set up',
+        'Add EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY to .env and deploy Edge Functions. For now, ask the admin to record your payment on the group screen.'
+      );
+      return;
+    }
     setInitializing(true);
     try {
       const { authorization_url } = await createContributionPayment(contributionId);
       setPaymentUrl(authorization_url);
     } catch (e) {
-      Alert.alert('Payment error', (e as Error).message);
+      Alert.alert('Payment error', mapPaystackFunctionError((e as Error).message));
     }
     setInitializing(false);
   };
 
-  const handleNavigationChange = (url: string) => {
-    if (url.includes('payment-callback') || url.includes('ajoesusu://')) {
-      Alert.alert('Payment submitted', 'We will confirm your payment shortly.', [
+  const handlePaymentReturn = useCallback(async () => {
+    if (!contributionId || handledCallbackRef.current) return;
+    handledCallbackRef.current = true;
+    setPaymentUrl(null);
+    setConfirming(true);
+    try {
+      const paid = await waitForPaidStatus(contributionId);
+      Alert.alert(
+        paid ? 'Payment confirmed' : 'Payment submitted',
+        paid
+          ? 'Your contribution is marked as paid.'
+          : 'We are still confirming. Check Contributions in a moment.',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+    } catch {
+      Alert.alert('Payment submitted', 'Check Contributions shortly for your updated status.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
+    } finally {
+      setConfirming(false);
+    }
+  }, [contributionId, router]);
+
+  const handleNavigationChange = (url: string) => {
+    if (CALLBACK_PATTERNS.some((p) => url.includes(p))) {
+      void handlePaymentReturn();
     }
   };
 
@@ -46,21 +119,57 @@ export default function PayScreen() {
           startInLoadingState
           renderLoading={() => (
             <View style={styles.loader}>
-              <ActivityIndicator color={brand.primary} size="large" />
+              <ActivityIndicator color={colors.primary} size="large" />
             </View>
           )}
         />
+        {confirming ? (
+          <View style={[styles.confirmOverlay, { backgroundColor: colors.background + 'CC' }]}>
+            <ActivityIndicator color={colors.primary} size="large" />
+            <Text variant="bodySmall" color="secondary" style={{ marginTop: spacing.md }}>
+              Confirming payment…
+            </Text>
+          </View>
+        ) : null}
       </View>
     );
   }
 
+  if (loadingDetails) {
+    return (
+      <View style={[styles.loader, { backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
+
+  const profileReady = isProfileReadyForTransfers(profile);
+
   return (
     <Screen safeArea={false} contentStyle={styles.content}>
-      <Text style={[styles.title, { color: colors.text }]}>Pay with Paystack</Text>
-      <Text style={[styles.body, { color: colors.textSecondary }]}>
-        You will complete payment in a secure checkout. Use test card 4084084084084081 in sandbox mode.
+      <ProfileSetupBanner profile={profile} />
+      <Card variant="standard">
+        <Text variant="caption" color="secondary">
+          Group
+        </Text>
+        <Text variant="headingSmall">{groupName}</Text>
+        <Text variant="caption" color="secondary" style={{ marginTop: spacing.md }}>
+          Amount
+        </Text>
+        <Text variant="display" color="accent">
+          {amount != null ? formatNaira(amount) : '—'}
+        </Text>
+      </Card>
+
+      <Text variant="bodyMedium" color="secondary" style={styles.body}>
+        Pay with card via Paystack. In test mode use card 4084084084084081, any future expiry, CVV 408.
       </Text>
-      <Button title="Continue to payment" onPress={startPayment} loading={initializing} />
+      <Button
+        title="Continue to Paystack"
+        onPress={startPayment}
+        loading={initializing}
+        disabled={!profileReady}
+      />
       <Button title="Cancel" onPress={() => router.back()} variant="secondary" />
     </Screen>
   );
@@ -68,8 +177,12 @@ export default function PayScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.lg },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: spacing.sm },
-  body: { fontSize: 15, lineHeight: 22, marginBottom: spacing.xl },
+  body: { lineHeight: 22, marginVertical: spacing.lg },
   webview: { flex: 1 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

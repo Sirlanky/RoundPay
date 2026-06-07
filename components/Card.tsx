@@ -1,30 +1,20 @@
 import { ReactNode } from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
-import Colors from '@/constants/Colors';
-import { radius, spacing } from '@/constants/theme';
-import { useColorScheme } from './useColorScheme';
+import { ViewStyle } from 'react-native';
+import { Card as UICard, type CardVariant } from '@/components/ui/Card';
 
 interface Props {
   children: ReactNode;
   style?: ViewStyle;
+  elevated?: boolean;
+  variant?: CardVariant;
 }
 
-export function Card({ children, style }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
-
+/** @deprecated Prefer `@/components/ui/Card`. */
+export function Card({ children, style, elevated = false, variant }: Props) {
+  const resolved = variant ?? (elevated ? 'elevated' : 'standard');
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, style]}>
+    <UICard variant={resolved} style={style}>
       {children}
-    </View>
+    </UICard>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: radius.md,
-    borderWidth: 1,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-});

@@ -1,9 +1,7 @@
 import { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Colors, { brand } from '@/constants/Colors';
-import { spacing, typography } from '@/constants/theme';
-import { Screen } from './Screen';
-import { useColorScheme } from './useColorScheme';
+import { Screen } from '@/components/ui/Screen';
+import { useThemeTokens } from '@/theme';
 
 interface Props {
   children: ReactNode;
@@ -13,29 +11,45 @@ interface Props {
 }
 
 export function AuthShell({ children, title, subtitle, keyboard }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, spacing, radius, typography } = useThemeTokens();
 
   return (
     <Screen keyboard={keyboard} contentStyle={styles.content}>
       <View style={styles.brandBlock}>
-        <View style={[styles.logoBadge, { backgroundColor: brand.primary }]}>
-          <Text style={styles.logoLetter}>A</Text>
+        <View style={[styles.logoBadge, { backgroundColor: colors.primary, borderRadius: radius.lg }]}>
+          <Text style={[typography.display, styles.logoLetter, { color: colors.textInverse, fontSize: 28 }]}>
+            R
+          </Text>
         </View>
-        <Text style={[styles.brandName, { color: brand.primary }]}>Ajo Esusu</Text>
-        <Text style={[styles.tagline, { color: colors.textSecondary }]}>
+        <Text style={[typography.display, styles.brandName, { color: colors.primary, fontSize: 28 }]}>
+          RoundPay
+        </Text>
+        <Text style={[typography.bodySmall, styles.tagline, { color: colors.textSecondary }]}>
           Save together. Collect your turn.
         </Text>
       </View>
       {(title || subtitle) && (
         <View style={styles.intro}>
-          {title ? <Text style={[styles.title, { color: colors.text }]}>{title}</Text> : null}
+          {title ? (
+            <Text style={[typography.headingMedium, { color: colors.textPrimary }]}>{title}</Text>
+          ) : null}
           {subtitle ? (
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+            <Text style={[typography.bodySmall, styles.subtitle, { color: colors.textSecondary }]}>
+              {subtitle}
+            </Text>
           ) : null}
         </View>
       )}
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderRadius: radius.lg,
+            padding: spacing.lg,
+          },
+        ]}>
         {children}
       </View>
     </Screen>
@@ -43,25 +57,21 @@ export function AuthShell({ children, title, subtitle, keyboard }: Props) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: spacing.md },
-  brandBlock: { alignItems: 'center', marginBottom: spacing.lg },
+  content: { paddingTop: 16 },
+  brandBlock: { alignItems: 'center', marginBottom: 24 },
   logoBadge: {
     width: 56,
     height: 56,
-    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+    marginBottom: 16,
   },
-  logoLetter: { color: '#fff', fontSize: 28, fontWeight: '800' },
-  brandName: { ...typography.hero, fontSize: 28 },
-  tagline: { ...typography.body, marginTop: spacing.xs, textAlign: 'center' },
-  intro: { marginBottom: spacing.md },
-  title: { ...typography.heading, fontSize: 20 },
-  subtitle: { ...typography.caption, marginTop: spacing.xs, lineHeight: 20 },
+  logoLetter: { fontWeight: '800' },
+  brandName: { fontWeight: '800' },
+  tagline: { marginTop: 4, textAlign: 'center' },
+  intro: { marginBottom: 16 },
+  subtitle: { marginTop: 4, lineHeight: 20 },
   card: {
-    borderRadius: 16,
     borderWidth: 1,
-    padding: spacing.lg,
   },
 });
