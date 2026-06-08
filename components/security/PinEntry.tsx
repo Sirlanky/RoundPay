@@ -1,8 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Colors, { brand } from '@/constants/Colors';
-import { radius, spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
 import { TRANSACTION_PIN_LENGTH } from '@/lib/transaction-pin';
+import { radius, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   value: string;
@@ -13,8 +11,7 @@ interface Props {
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'] as const;
 
 export function PinEntry({ value, onChange, disabled }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   const pressKey = (key: (typeof KEYS)[number]) => {
     if (disabled) return;
@@ -36,7 +33,7 @@ export function PinEntry({ value, onChange, disabled }: Props) {
               styles.dot,
               {
                 borderColor: colors.border,
-                backgroundColor: i < value.length ? brand.primary : 'transparent',
+                backgroundColor: i < value.length ? colors.primary : 'transparent',
               },
             ]}
           />
@@ -57,12 +54,12 @@ export function PinEntry({ value, onChange, disabled }: Props) {
               style={({ pressed }) => [
                 styles.key,
                 {
-                  backgroundColor: colors.card,
+                  backgroundColor: colors.surface,
                   borderColor: colors.border,
                   opacity: pressed && !disabled ? 0.85 : 1,
                 },
               ]}>
-              <Text style={[styles.keyLabel, { color: colors.text }]}>{label}</Text>
+              <Text style={[styles.keyLabel, { color: colors.textPrimary }]}>{label}</Text>
             </Pressable>
           );
         })}

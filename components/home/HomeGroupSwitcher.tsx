@@ -1,8 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Colors, { brand } from '@/constants/Colors';
 import type { AjoGroup } from '@/lib/types';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   groups: AjoGroup[];
@@ -11,8 +9,7 @@ interface Props {
 }
 
 export function HomeGroupSwitcher({ groups, selectedId, onSelect }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
 
   if (groups.length < 2) return null;
 
@@ -27,12 +24,12 @@ export function HomeGroupSwitcher({ groups, selectedId, onSelect }: Props) {
             style={[
               styles.chip,
               {
-                backgroundColor: selected ? brand.primary + '18' : colors.card,
-                borderColor: selected ? brand.primary : colors.border,
+                backgroundColor: selected ? primaryAlpha(scheme, 24) : colors.surface,
+                borderColor: selected ? colors.primary : colors.border,
               },
             ]}>
             <Text
-              style={[styles.chipText, { color: selected ? brand.primary : colors.text }]}
+              style={[styles.chipText, { color: selected ? colors.primary : colors.textPrimary }]}
               numberOfLines={1}>
               {group.name}
             </Text>

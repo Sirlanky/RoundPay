@@ -2,14 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Modal, Pressable, StyleSheet, Text, View, type AppStateStatus } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/contexts/LanguageContext';
-import Colors, { brand } from '@/constants/Colors';
 import {
   authenticateWithBiometrics,
   getUnlockMethodLabel,
   isAppLockEnabled,
 } from '@/lib/app-lock';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 /** Ignore resume-lock briefly after a successful unlock (auth UI causes inactive→active). */
 const UNLOCK_GRACE_MS = 3000;
@@ -21,8 +19,7 @@ interface Props {
 export function AppLockGate({ children }: Props) {
   const { session, loading } = useAuth();
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
   const [locked, setLocked] = useState(false);
   const [checking, setChecking] = useState(true);
   const [unlockMethod, setUnlockMethod] = useState('Biometrics');
@@ -134,7 +131,7 @@ export function AppLockGate({ children }: Props) {
       {children}
       <Modal visible={locked} animationType="fade" presentationStyle="fullScreen">
         <View style={[styles.overlay, { backgroundColor: colors.background }]}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('security.appLock.unlockTitle')}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('security.appLock.unlockTitle')}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>
             {t('security.appLock.unlockHint', { method: unlockMethod })}
           </Text>
@@ -144,7 +141,7 @@ export function AppLockGate({ children }: Props) {
             style={({ pressed }) => [
               styles.button,
               {
-                backgroundColor: brand.primary,
+                backgroundColor: colors.primary,
                 opacity: unlocking ? 0.6 : pressed ? 0.9 : 1,
               },
             ]}>

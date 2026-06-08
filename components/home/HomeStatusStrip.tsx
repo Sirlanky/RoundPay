@@ -1,9 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Card } from '@/components/Card';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { Card } from '@/components/ui';
 import type { HomeDashboardData } from '@/lib/home-dashboard';
-import { spacing } from '@/constants/theme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   data: HomeDashboardData;
@@ -11,8 +9,7 @@ interface Props {
 }
 
 export function HomeStatusStrip({ data, onViewPayments }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
   const { primaryGroup, userContributionStatus, isAdmin, adminPendingCount, isOverdue } = data;
 
   if (!primaryGroup || primaryGroup.status !== 'active') return null;
@@ -36,15 +33,15 @@ export function HomeStatusStrip({ data, onViewPayments }: Props) {
       <Card
         style={{
           ...styles.card,
-          borderColor: brand.primary + '44',
-          backgroundColor: brand.primary + '08',
+          borderColor: primaryAlpha(scheme, 32),
+          backgroundColor: primaryAlpha(scheme, 8),
         }}>
         {lines.map((line) => (
-          <Text key={line} style={[styles.line, { color: colors.text }]}>
+          <Text key={line} style={[styles.line, { color: colors.textPrimary }]}>
             {line}
           </Text>
         ))}
-        <Text style={[styles.link, { color: brand.primary }]}>View payments →</Text>
+        <Text style={[styles.link, { color: colors.primary }]}>View payments →</Text>
       </Card>
     </Pressable>
   );

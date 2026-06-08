@@ -4,17 +4,16 @@ import { useCallback, useContext } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { TAB_BAR_FLOAT_GAP } from '@/components/navigation/tab-bar-layout';
-import { TAB_CONFIG, type TabRouteName } from '@/components/navigation/tab-bar-config';
+import { getActiveTabConfig, isTabInConfig } from '@/components/navigation/tab-bar-config';
 import { useTranslation } from '@/contexts/LanguageContext';
+import { useAdminMode } from '@/contexts/AdminModeContext';
 import { useNotificationUnreadCount } from '@/contexts/NotificationsContext';
 import { navigationRadius, spacing, typography, useThemeTokens } from '@/theme';
 
-function isTabRoute(name: string): name is TabRouteName {
-  return name in TAB_CONFIG;
-}
-
 export function RoundPayTabBar({ state, navigation, insets }: BottomTabBarProps) {
   const { t } = useTranslation();
+  const { mode } = useAdminMode();
+  const tabConfig = getActiveTabConfig(mode);
   const theme = useThemeTokens();
   const { colors, shadow } = theme;
   const unreadCount = useNotificationUnreadCount();
@@ -46,13 +45,18 @@ export function RoundPayTabBar({ state, navigation, insets }: BottomTabBarProps)
           shadow('large'),
         ]}>
         {state.routes.map((route) => {
-          if (!isTabRoute(route.name)) return null;
+          if (!isTabInConfig(route.name, mode)) return null;
 
-          const config = TAB_CONFIG[route.name];
+          const config = tabConfig[route.name];
+          if (!config) return null;
           const label = t(config.labelKey);
           const isFocused = route.key === focusedKey;
           const icon = isFocused && config.iconFocused ? config.iconFocused : config.icon;
-          const badge = route.name === 'notifications' && unreadCount > 0 ? unreadCount : undefined;
+          const badge =
+            (route.name === 'notifications' || (mode === 'admin' && route.name === 'more')) &&
+            unreadCount > 0
+              ? unreadCount
+              : undefined;
           const iconColor = isFocused ? colors.textInverse : colors.tabIconDefault;
           const labelColor = isFocused ? colors.textInverse : colors.tabIconDefault;
 

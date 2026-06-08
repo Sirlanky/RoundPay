@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
+import { Button } from '@/components/ui';
 import { PinEntry } from '@/components/security/PinEntry';
-import Colors from '@/constants/Colors';
 import { useTranslation } from '@/contexts/LanguageContext';
 import {
   isTransactionPinEnabled,
@@ -11,8 +10,7 @@ import {
   TRANSACTION_PIN_LENGTH,
   verifyTransactionPin,
 } from '@/lib/transaction-pin';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -24,8 +22,7 @@ type Step = 'menu' | 'current' | 'new' | 'confirm' | 'remove';
 
 export function TransactionPinSheet({ visible, onClose, onChanged }: Props) {
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
   const [hasPin, setHasPin] = useState(false);
   const [step, setStep] = useState<Step>('menu');
   const [pin, setPin] = useState('');
@@ -161,7 +158,7 @@ export function TransactionPinSheet({ visible, onClose, onChanged }: Props) {
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>{hint}</Text>
 
           {step === 'menu' ? (

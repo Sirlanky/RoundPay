@@ -2,21 +2,18 @@ import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text } from 'react-native';
 import { AuthShell } from '@/components/AuthShell';
-import { Button } from '@/components/Button';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors from '@/constants/Colors';
-import { spacing } from '@/constants/theme';
+import { Button } from '@/components/ui';
+import { spacing, useThemeTokens } from '@/theme';
 
 export default function SetupScreen() {
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   return (
     <AuthShell
       title="Connect Supabase"
       subtitle="Create a free project, then paste keys into .env in the project folder.">
-      <Text style={[styles.step, { color: colors.text }]}>
+      <Text style={[styles.step, { color: colors.textPrimary }]}>
         1. Create a project at supabase.com (name: RoundPay)
       </Text>
       <Button
@@ -24,17 +21,17 @@ export default function SetupScreen() {
         onPress={() => WebBrowser.openBrowserAsync('https://supabase.com/dashboard/new')}
         variant="secondary"
       />
-      <Text style={[styles.step, { color: colors.text }]}>
+      <Text style={[styles.step, { color: colors.textPrimary }]}>
         2. Copy Project URL + anon key into <Text style={styles.mono}>.env</Text>
       </Text>
-      <Text style={[styles.code, { color: colors.text, backgroundColor: colors.background }]}>
+      <Text style={[styles.code, { color: colors.textPrimary, backgroundColor: colors.background }]}>
         EXPO_PUBLIC_SUPABASE_URL=…{'\n'}
         EXPO_PUBLIC_SUPABASE_ANON_KEY=…
       </Text>
-      <Text style={[styles.step, { color: colors.text }]}>
+      <Text style={[styles.step, { color: colors.textPrimary }]}>
         3. SQL Editor → run <Text style={styles.mono}>supabase/migrations/001_schema.sql</Text>
       </Text>
-      <Text style={[styles.step, { color: colors.text }]}>
+      <Text style={[styles.step, { color: colors.textPrimary }]}>
         4. Authentication → enable Email provider
       </Text>
       <Text style={[styles.step, { color: colors.textSecondary, fontSize: 13 }]}>

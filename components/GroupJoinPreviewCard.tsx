@@ -1,11 +1,9 @@
 import { ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { Card } from './Card';
+import { Card } from '@/components/ui';
 import { StatusBadge } from './StatusBadge';
-import Colors, { brand } from '@/constants/Colors';
 import { formatNaira, frequencyLabel } from '@/lib/format';
 import type { GroupJoinPreview } from '@/lib/groups';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from './useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   preview: GroupJoinPreview | null;
@@ -14,15 +12,14 @@ interface Props {
 }
 
 export function GroupJoinPreviewCard({ preview, loading, code }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   if (code.length < 6) return null;
 
   if (loading) {
     return (
       <Card>
-        <ActivityIndicator color={brand.primary} />
+        <ActivityIndicator color={colors.primary} />
       </Card>
     );
   }
@@ -42,8 +39,8 @@ export function GroupJoinPreviewCard({ preview, loading, code }: Props) {
   return (
     <Card>
       <Text style={[styles.label, { color: colors.textSecondary }]}>You are joining</Text>
-      <Text style={[styles.name, { color: colors.text }]}>{preview.name}</Text>
-      <Text style={[styles.amount, { color: brand.primary }]}>{formatNaira(preview.contribution_amount)}</Text>
+      <Text style={[styles.name, { color: colors.textPrimary }]}>{preview.name}</Text>
+      <Text style={[styles.amount, { color: colors.primary }]}>{formatNaira(preview.contribution_amount)}</Text>
       <Text style={[styles.meta, { color: colors.textSecondary }]}>
         {frequencyLabel(preview.frequency)} · {preview.member_count}/{preview.max_members} members
         {spotsLeft > 0 ? ` · ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left` : ' · Full'}

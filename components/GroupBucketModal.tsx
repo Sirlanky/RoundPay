@@ -8,12 +8,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GroupCard } from './GroupCard';
-import { useColorScheme } from './useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
 import type { GroupBucket } from '@/lib/group-sections';
 import { groupBucketHint, groupBucketLabel } from '@/lib/group-sections';
 import type { AjoGroup } from '@/lib/types';
-import { radius, spacing } from '@/constants/theme';
+import { primaryAlpha, radius, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -23,8 +21,7 @@ interface Props {
 }
 
 export function GroupBucketModal({ visible, bucket, groups, onClose }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
   const insets = useSafeAreaInsets();
   const isHistory = bucket === 'completed';
 
@@ -35,13 +32,13 @@ export function GroupBucketModal({ visible, bucket, groups, onClose }: Props) {
           style={[
             styles.sheet,
             {
-              backgroundColor: colors.card,
+              backgroundColor: colors.surface,
               paddingBottom: Math.max(insets.bottom, spacing.md),
             },
           ]}
           onPress={(e) => e.stopPropagation()}>
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
-          <Text style={[styles.title, { color: colors.text }]}>{groupBucketLabel(bucket)}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{groupBucketLabel(bucket)}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>{groupBucketHint(bucket)}</Text>
 
           <ScrollView
@@ -64,8 +61,8 @@ export function GroupBucketModal({ visible, bucket, groups, onClose }: Props) {
 
           <Pressable
             onPress={onClose}
-            style={[styles.closeBtn, { backgroundColor: brand.primary + '14' }]}>
-            <Text style={[styles.closeText, { color: brand.primary }]}>Close</Text>
+            style={[styles.closeBtn, { backgroundColor: primaryAlpha(scheme, 16) }]}>
+            <Text style={[styles.closeText, { color: colors.primary }]}>Close</Text>
           </Pressable>
         </Pressable>
       </Pressable>

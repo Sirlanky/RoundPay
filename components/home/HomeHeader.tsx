@@ -1,27 +1,24 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ProfileAvatar } from '@/components/profile/ProfileAvatar';
 import { PlatformIcon } from '@/components/navigation/PlatformIcon';
+import { Text } from '@/components/ui';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { getProfileDisplayName } from '@/lib/profile-display';
 import type { Profile } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
-import Colors, { brand } from '@/constants/Colors';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   profile: Profile | null | undefined;
   user: User | null | undefined;
-  /** Welcome-only header for empty home (no brand title). */
   variant?: 'dashboard' | 'welcome';
 }
 
 export function HomeHeader({ profile, user, variant = 'dashboard' }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme, radius, shadow } = useThemeTokens();
 
   const firstName =
     profile?.first_name?.trim() ||
@@ -29,6 +26,7 @@ export function HomeHeader({ profile, user, variant = 'dashboard' }: Props) {
     undefined;
   const displayName = getProfileDisplayName(profile, user);
   const greeting = firstName ? t('home.welcomeBackName', { name: firstName }) : t('home.welcomeBack');
+  const isWelcome = variant === 'welcome';
 
   const goToProfile = () => router.push('/(tabs)/profile');
 
@@ -39,35 +37,39 @@ export function HomeHeader({ profile, user, variant = 'dashboard' }: Props) {
       accessibilityLabel={t('common.goToProfile')}
       style={({ pressed }) => [
         styles.wrap,
-        variant === 'welcome' ? styles.welcomeWrap : null,
-        { opacity: pressed ? 0.9 : 1 },
+        isWelcome && styles.welcomeWrap,
+        isWelcome && {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          borderRadius: radius.lg,
+          borderWidth: StyleSheet.hairlineWidth,
+        },
+        isWelcome && shadow('small'),
+        { opacity: pressed ? 0.94 : 1 },
       ]}>
-      <ProfileAvatar profile={profile} user={user} size={variant === 'welcome' ? 56 : 48} />
+      <ProfileAvatar profile={profile} user={user} size={isWelcome ? 52 : 48} />
       <View style={styles.body}>
-        <Text
-          style={[
-            variant === 'welcome' ? styles.welcomeGreeting : styles.greeting,
-            { color: variant === 'welcome' ? colors.text : colors.textSecondary },
-          ]}>
+        <Text variant="bodySmall" color="secondary">
           {greeting}
         </Text>
-        <Text
-          style={[
-            variant === 'welcome' ? styles.welcomeName : styles.name,
-            { color: colors.text },
-          ]}
-          numberOfLines={1}>
+        <Text variant="headingMedium" numberOfLines={1} style={styles.name}>
           {displayName}
         </Text>
-        {variant === 'dashboard' ? (
-          <Text style={[styles.brand, { color: brand.primary }]}>RoundPay</Text>
+        {!isWelcome ? (
+          <View style={[styles.brandPill, { backgroundColor: primaryAlpha(scheme, 12) }]}>
+            <Text variant="caption" color="accent" style={styles.brandPillText}>
+              RoundPay
+            </Text>
+          </View>
         ) : null}
       </View>
-      <PlatformIcon
-        name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-        size={18}
-        color={colors.textSecondary}
-      />
+      <View style={[styles.chevronWrap, { backgroundColor: colors.surfaceSecondary }]}>
+        <PlatformIcon
+          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+          size={16}
+          color={colors.textSecondary}
+        />
+      </View>
     </Pressable>
   );
 }
@@ -79,11 +81,25 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  welcomeWrap: { marginBottom: spacing.md },
-  body: { flex: 1, minWidth: 0 },
-  greeting: { fontSize: 13, fontWeight: '500' },
-  welcomeGreeting: { fontSize: 14, fontWeight: '500', lineHeight: 20 },
-  name: { fontSize: 20, fontWeight: '700', marginTop: 2 },
-  welcomeName: { fontSize: 22, fontWeight: '800', lineHeight: 28, marginTop: 2 },
-  brand: { fontSize: 13, fontWeight: '600', marginTop: 2 },
+  welcomeWrap: {
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  body: { flex: 1, minWidth: 0, gap: 2 },
+  name: { marginTop: 0 },
+  brandPill: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  brandPillText: { fontWeight: '700' },
+  chevronWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

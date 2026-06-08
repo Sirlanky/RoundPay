@@ -1,8 +1,7 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
+import { Button, Card } from '@/components/ui';
 import { CycleProgress } from '@/components/CycleProgress';
 import { CyclePaymentsPanel } from '@/components/CyclePaymentsPanel';
 import { DeleteDraftGroupCard } from '@/components/DeleteDraftGroupCard';
@@ -14,7 +13,6 @@ import { Screen } from '@/components/Screen';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/contexts/LanguageContext';
-import Colors, { brand } from '@/constants/Colors';
 import { formatNaira, frequencyLabel } from '@/lib/format';
 import { messageFromGroupError } from '@/lib/group-errors';
 import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
@@ -30,8 +28,7 @@ import { useSupportedGroupFrequencies } from '@/hooks/useSupportedGroupFrequenci
 import { recordContributionPayment } from '@/lib/contributions';
 import { membersStillNeeded, rosterIsComplete, validateCreateGroupInput } from '@/lib/group-validation';
 import type { GroupFrequency } from '@/lib/types';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 export default function GroupDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
@@ -51,8 +48,7 @@ export default function GroupDetailScreen() {
   const [frequencySaving, setFrequencySaving] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
   const { supported, loading: freqLoading } = useSupportedGroupFrequencies();
 
   const memberByUserId = useMemo(() => {
@@ -319,7 +315,7 @@ export default function GroupDetailScreen() {
   if (loading || isDeleting) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={brand.primary} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
         {isDeleting ? (
           <Text style={[styles.deletingText, { color: colors.textSecondary }]}>Deleting group…</Text>
         ) : null}
@@ -357,13 +353,21 @@ export default function GroupDetailScreen() {
       }}>
       <Card style={styles.hero}>
         <View style={styles.heroTop}>
-          <Text style={[styles.name, { color: colors.text }]}>{group.name}</Text>
+          <Text style={[styles.name, { color: colors.textPrimary }]}>{group.name}</Text>
           <StatusBadge status={group.status} />
         </View>
-        <Text style={[styles.amount, { color: brand.primary }]}>{formatNaira(group.contribution_amount)}</Text>
+        <Text style={[styles.amount, { color: colors.primary }]}>{formatNaira(group.contribution_amount)}</Text>
+        {isAdmin ? (
+          <Button
+            title={t('admin.groupAdminTitle')}
+            variant="secondary"
+            onPress={() => router.push(`/group/${group.id}/admin` as Href)}
+            style={styles.adminHubBtn}
+          />
+        ) : null}
         {isDraft && isAdmin ? (
           <View style={styles.frequencyBlock}>
-            <Text style={[styles.freqLabel, { color: colors.text }]}>How often?</Text>
+            <Text style={[styles.freqLabel, { color: colors.textPrimary }]}>How often?</Text>
             <GroupFrequencyPicker
               value={group.frequency}
               onChange={handleFrequencyChange}
@@ -399,7 +403,7 @@ export default function GroupDetailScreen() {
 
       {isDraft && isAdmin ? (
         <Card style={{ marginBottom: spacing.md }}>
-          <Text style={[styles.section, { color: colors.text, marginTop: 0 }]}>Group settings</Text>
+          <Text style={[styles.section, { color: colors.textPrimary, marginTop: 0 }]}>Group settings</Text>
           <Text style={[styles.actionHint, { color: colors.textSecondary, textAlign: 'left', marginTop: 0 }]}>
             {group.max_members} members · {formatNaira(group.contribution_amount)} each
           </Text>
@@ -414,7 +418,7 @@ export default function GroupDetailScreen() {
 
       {isDraft && isAdmin ? (
         <Card style={{ marginBottom: spacing.md }}>
-          <Text style={[styles.section, { color: colors.text, marginTop: 0 }]}>Your contribution</Text>
+          <Text style={[styles.section, { color: colors.textPrimary, marginTop: 0 }]}>Your contribution</Text>
           <Text style={[styles.actionHint, { color: colors.textSecondary, textAlign: 'left', marginTop: 0 }]}>
             {adminInRotation
               ? 'You are in the rotation and will pay on your turn.'
@@ -448,19 +452,19 @@ export default function GroupDetailScreen() {
         />
       )}
 
-      <Text style={[styles.section, { color: colors.text }]}>
+      <Text style={[styles.section, { color: colors.textPrimary }]}>
         Members ({members.length}/{group.max_members})
       </Text>
       {(members as MemberWithProfile[]).map((m) => {
         const isCollector = currentCycle?.recipient_id === m.user_id;
         const isYou = m.user_id === user?.id;
         return (
-          <View key={m.id} style={[styles.memberRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.orderBadge, { backgroundColor: brand.primary + '22' }]}>
-              <Text style={{ color: brand.primary, fontWeight: '700' }}>{m.rotation_order}</Text>
+          <View key={m.id} style={[styles.memberRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.orderBadge, { backgroundColor: primaryAlpha(scheme, 32) }]}>
+              <Text style={{ color: colors.primary, fontWeight: '700' }}>{m.rotation_order}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontWeight: '600' }}>
+              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
                 {memberDisplayName(m)}
                 {isYou ? ' (you)' : ''}
               </Text>
@@ -551,6 +555,7 @@ const styles = StyleSheet.create({
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
   name: { fontSize: 22, fontWeight: '700', flex: 1 },
   amount: { fontSize: 28, fontWeight: '800', marginTop: spacing.sm },
+  adminHubBtn: { marginTop: spacing.sm, marginBottom: 0 },
   meta: { fontSize: 14, marginTop: 4 },
   frequencyBlock: { marginTop: spacing.sm },
   freqLabel: { fontSize: 14, fontWeight: '500', marginBottom: spacing.xs },

@@ -2,13 +2,11 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { Modal, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Alert } from 'react-native';
-import { Button } from '@/components/Button';
-import Colors from '@/constants/Colors';
+import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { radius, spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { radius, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -29,8 +27,7 @@ function osLabel(): string {
 export function ActiveDevicesSheet({ visible, onClose }: Props) {
   const { user, signOut } = useAuth();
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   const signOutOthers = () => {
@@ -78,12 +75,12 @@ export function ActiveDevicesSheet({ visible, onClose }: Props) {
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('security.devices.title')}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('security.devices.title')}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>{t('security.devices.hint')}</Text>
 
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>{t('security.devices.thisDevice')}</Text>
-            <Text style={[styles.cardValue, { color: colors.text }]}>{deviceLabel()}</Text>
+            <Text style={[styles.cardValue, { color: colors.textPrimary }]}>{deviceLabel()}</Text>
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
               {t('security.devices.os')}: {osLabel()}
             </Text>

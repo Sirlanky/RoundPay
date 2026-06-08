@@ -1,9 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { useColorScheme } from './useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
-import { spacing } from '@/constants/theme';
+import { spacing, useThemeTokens, type ThemeColors } from '@/theme';
 
 interface Props {
   active: number;
@@ -15,13 +13,12 @@ interface Props {
 
 export function GroupStatsRow({ active, draft, completed, onPressDraft, onPressHistory }: Props) {
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   return (
     <View style={styles.row}>
-      <View style={[styles.chip, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.value, { color: brand.primary }]}>{active}</Text>
+      <View style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.value, { color: colors.primary }]}>{active}</Text>
         <Text style={[styles.label, { color: colors.textSecondary }]}>{t('groups.active')}</Text>
       </View>
 
@@ -57,7 +54,7 @@ function StatChip({
   label: string;
   value: number;
   accent: string;
-  colors: (typeof Colors)['light'];
+  colors: ThemeColors;
   tappable: boolean;
   onPress?: () => void;
 }) {
@@ -73,7 +70,7 @@ function StatChip({
 
   if (!tappable || !onPress) {
     return (
-      <View style={[styles.chip, styles.chipMuted, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[styles.chip, styles.chipMuted, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {content}
       </View>
     );
@@ -86,7 +83,7 @@ function StatChip({
         styles.chip,
         styles.chipTappable,
         {
-          backgroundColor: colors.card,
+          backgroundColor: colors.surface,
           borderColor: accent + '55',
           opacity: pressed ? 0.85 : 1,
         },

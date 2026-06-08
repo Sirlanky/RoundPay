@@ -8,16 +8,14 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Button } from '@/components/Button';
+import { Button } from '@/components/ui';
 import { Input } from '@/components/Input';
-import Colors, { brand } from '@/constants/Colors';
 import {
   PROFILE_GENDER_OPTIONS,
   type ProfileFormValues,
 } from '@/lib/profile-form';
 import type { ProfileGender } from '@/lib/types';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -38,8 +36,7 @@ export function ProfileEditSheet({
   onSave,
   onClose,
 }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -50,7 +47,7 @@ export function ProfileEditSheet({
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <Text style={[styles.title, { color: colors.text }]}>Edit profile</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Edit profile</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>
             Your legal name helps admins identify you in savings groups.
           </Text>
@@ -102,7 +99,7 @@ export function ProfileEditSheet({
             keyboardType="numbers-and-punctuation"
           />
 
-          <Text style={[styles.fieldLabel, { color: colors.text }]}>Gender</Text>
+          <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Gender</Text>
           <View style={styles.genderRow}>
             {PROFILE_GENDER_OPTIONS.map((option) => {
               const selected = values.gender === option.value;
@@ -113,11 +110,11 @@ export function ProfileEditSheet({
                   style={[
                     styles.genderChip,
                     {
-                      backgroundColor: selected ? brand.primary + '14' : colors.card,
-                      borderColor: selected ? brand.primary : colors.border,
+                      backgroundColor: selected ? primaryAlpha(scheme, 16) : colors.surface,
+                      borderColor: selected ? colors.primary : colors.border,
                     },
                   ]}>
-                  <Text style={[styles.genderText, { color: selected ? brand.primary : colors.text }]}>
+                  <Text style={[styles.genderText, { color: selected ? colors.primary : colors.textPrimary }]}>
                     {option.label}
                   </Text>
                 </Pressable>

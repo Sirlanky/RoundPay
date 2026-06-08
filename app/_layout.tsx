@@ -11,12 +11,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppLockGate } from '@/components/AppLockGate';
 import { PushNotificationHandler } from '@/components/PushNotificationHandler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AdminModeProvider } from '@/contexts/AdminModeContext';
+import { PlanProvider } from '@/contexts/PlanContext';
 import { TransactionPinProvider } from '@/contexts/TransactionPinContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { brand } from '@/theme/colors';
 import { useThemeTokens } from '@/theme';
 import { createSessionFromUrl } from '@/lib/auth';
+import { SIMPLE_GUEST_AUTH } from '@/lib/auth-mode';
 import { supabase } from '@/lib/supabase';
 
 export { ErrorBoundary } from 'expo-router';
@@ -80,9 +83,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       const isAnonymous = session?.user?.is_anonymous === true;
       const onLogin = inAuthGroup && authScreen === 'login';
       const onVerifyOtp = inAuthGroup && authScreen === 'verify-otp';
-      // Keep login for guests linking email; keep verify until OTP completes (guest or signed-out).
+      // Email OTP flow only — guest "Enter app" should go straight to tabs.
       const stayForEmailAuth =
-        (onLogin && isAnonymous) || (onVerifyOtp && (!hasSession || isAnonymous));
+        !SIMPLE_GUEST_AUTH &&
+        ((onLogin && isAnonymous) || (onVerifyOtp && (!hasSession || isAnonymous)));
 
       if (!configured) {
         if (!inAuthGroup || segments[1] !== 'setup') target = '/(auth)/setup';
@@ -148,6 +152,8 @@ export default function RootLayout() {
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>
+            <AdminModeProvider>
+              <PlanProvider>
             <TransactionPinProvider>
               <AuthGate>
                 <AppLockGate>
@@ -165,6 +171,8 @@ export default function RootLayout() {
                 </AppLockGate>
               </AuthGate>
             </TransactionPinProvider>
+              </PlanProvider>
+            </AdminModeProvider>
           </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import { Button } from '@/components/Button';
+import { Button } from '@/components/ui';
 import { Card } from '@/components/Card';
 import { Input } from '@/components/Input';
 import { Text } from '@/components/ui/Text';
@@ -37,11 +37,15 @@ export function OtpVerificationCard({
     setSentHint('');
     try {
       const result = await sendIdentityOtp(channel);
-      setSentHint(
+      const hints = [
         channel === 'phone'
           ? t('otp.sentPhone', { destination: result.destination })
-          : t('otp.sentEmail', { destination: result.destination })
-      );
+          : t('otp.sentEmail', { destination: result.destination }),
+      ];
+      if (result.dev_code) {
+        hints.push(t('otp.devCodeHint', { code: result.dev_code }));
+      }
+      setSentHint(hints.join('\n'));
     } catch (e) {
       Alert.alert(t('otp.sendFailedTitle'), messageFromGroupError(e));
     }

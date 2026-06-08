@@ -54,6 +54,11 @@ export interface AjoGroup {
   current_cycle: number;
   admin_id: string;
   invite_code: string;
+  notes?: string | null;
+  penalty_amount?: number;
+  penalty_grace_days?: number;
+  archived_at?: string | null;
+  settings?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }

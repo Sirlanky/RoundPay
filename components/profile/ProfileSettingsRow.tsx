@@ -1,9 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Colors, { brand } from '@/constants/Colors';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 type IconName = { ios: string; android: string; web: string };
 
@@ -29,10 +27,9 @@ export function ProfileSettingsRow({
   isLast,
 }: Props) {
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
   const disabled = comingSoon || !onPress;
-  const tint = destructive ? colors.error : brand.primary;
+  const tint = destructive ? colors.error : colors.primary;
 
   return (
     <Pressable
@@ -43,11 +40,11 @@ export function ProfileSettingsRow({
         !isLast && { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
         { opacity: pressed && !disabled ? 0.88 : comingSoon ? 0.55 : 1 },
       ]}>
-      <View style={[styles.iconWrap, { backgroundColor: brand.primary + '12' }]}>
+      <View style={[styles.iconWrap, { backgroundColor: primaryAlpha(scheme, 12) }]}>
         <SymbolView name={icon as never} tintColor={tint} size={18} />
       </View>
       <View style={styles.body}>
-        <Text style={[styles.label, { color: destructive ? colors.error : colors.text }]}>{label}</Text>
+        <Text style={[styles.label, { color: destructive ? colors.error : colors.textPrimary }]}>{label}</Text>
         {subtitle ? (
           <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={2}>
             {subtitle}

@@ -18,5 +18,8 @@ export function messageFromAuthError(error: unknown): string {
   if (/invalid login credentials|invalid credentials/i.test(msg)) {
     return 'Wrong email or password. Try again or use a sign-in code instead.';
   }
+  if (/provider is not enabled|oauth/i.test(msg)) {
+    return 'This sign-in method is not enabled yet. Turn it on in Supabase → Authentication → Providers.';
+  }
   return msg || 'Something went wrong. Try again.';
 }

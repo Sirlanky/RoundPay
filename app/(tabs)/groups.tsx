@@ -1,8 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
+import { Button, Card } from '@/components/ui';
 import { EmptyState } from '@/components/EmptyState';
 import { GroupBucketModal } from '@/components/GroupBucketModal';
 import { GroupListSection } from '@/components/GroupListSection';
@@ -10,13 +9,11 @@ import { GroupStatsRow } from '@/components/GroupStatsRow';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/contexts/LanguageContext';
-import Colors, { brand } from '@/constants/Colors';
 import { getUserGroups } from '@/lib/groups';
 import { categorizeGroups } from '@/lib/group-sections';
 import type { GroupBucket } from '@/lib/group-sections';
 import type { AjoGroup } from '@/lib/types';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 export default function GroupsScreen() {
   const { user, canSave } = useAuth();
@@ -27,8 +24,7 @@ export default function GroupsScreen() {
   const [loadError, setLoadError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [modalBucket, setModalBucket] = useState<GroupBucket | null>(null);
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   const load = useCallback(async () => {
     if (!user) {
@@ -62,7 +58,7 @@ export default function GroupsScreen() {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={brand.primary} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
@@ -80,7 +76,7 @@ export default function GroupsScreen() {
       contentStyle={styles.content}>
       {!canSave ? (
         <Card style={styles.controlCard}>
-          <Text style={[styles.controlTitle, { color: colors.text }]}>{t('groups.notInApp')}</Text>
+          <Text style={[styles.controlTitle, { color: colors.textPrimary }]}>{t('groups.notInApp')}</Text>
           <Text style={[styles.controlBody, { color: colors.textSecondary }]}>
             {t('groups.notInAppBody')}
           </Text>

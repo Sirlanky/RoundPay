@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
-import Colors, { brand } from '@/constants/Colors';
+import { Button } from '@/components/ui';
 import { useTranslation } from '@/contexts/LanguageContext';
 import {
   isReminderColumnMissing,
@@ -10,8 +9,7 @@ import {
   type ReminderPreferences,
 } from '@/lib/reminder-settings';
 import type { Profile } from '@/lib/types';
-import { radius, spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { radius, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -35,8 +33,7 @@ const TOGGLES: { key: ToggleKey; labelKey: 'reminders.master' | 'reminders.contr
 
 export function ReminderSettingsSheet({ visible, profile, userId, onSaved, onClose }: Props) {
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
   const [prefs, setPrefs] = useState(() => profileToReminderPreferences(profile));
   const [saving, setSaving] = useState(false);
 
@@ -72,7 +69,7 @@ export function ReminderSettingsSheet({ visible, profile, userId, onSaved, onClo
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('reminders.title')}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('reminders.title')}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>{t('reminders.hint')}</Text>
 
           <View style={styles.list}>
@@ -84,21 +81,21 @@ export function ReminderSettingsSheet({ visible, profile, userId, onSaved, onClo
                   style={[
                     styles.row,
                     {
-                      backgroundColor: colors.card,
+                      backgroundColor: colors.surface,
                       borderColor: colors.border,
                       opacity: disabled && item.key !== 'reminders_enabled' ? 0.55 : 1,
                     },
                   ]}>
                   <View style={styles.rowBody}>
-                    <Text style={[styles.label, { color: colors.text }]}>{t(item.labelKey)}</Text>
+                    <Text style={[styles.label, { color: colors.textPrimary }]}>{t(item.labelKey)}</Text>
                     <Text style={[styles.rowHint, { color: colors.textSecondary }]}>{t(item.hintKey)}</Text>
                   </View>
                   <Switch
                     value={prefs[item.key]}
                     onValueChange={(value) => void updateToggle(item.key, value)}
                     disabled={disabled}
-                    trackColor={{ false: colors.border, true: brand.primary + '88' }}
-                    thumbColor={prefs[item.key] ? brand.primary : '#f4f4f5'}
+                    trackColor={{ false: colors.border, true: colors.primary + '88' }}
+                    thumbColor={prefs[item.key] ? colors.primary : '#f4f4f5'}
                   />
                 </View>
               );

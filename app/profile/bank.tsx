@@ -2,17 +2,14 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthActionBanner } from '@/components/AuthActionBanner';
-import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
+import { Button, Card } from '@/components/ui';
 import { Input } from '@/components/Input';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
-import Colors, { brand } from '@/constants/Colors';
 import { NIGERIAN_BANKS } from '@/constants/banks';
 import { bankAuthMessage, getAccessToken, mapPaystackFunctionError } from '@/lib/auth-session';
 import { resolveBankAccount, saveBankAccount } from '@/lib/paystack';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens, type ThemeColors } from '@/theme';
 
 export default function BankScreen() {
   const { user, buildMode, refreshProfile } = useAuth();
@@ -24,8 +21,7 @@ export default function BankScreen() {
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   const signedIn = !!user && !buildMode;
 
@@ -86,10 +82,10 @@ export default function BankScreen() {
       </Text>
 
       <Pressable
-        style={[styles.picker, { backgroundColor: colors.card, borderColor: colors.border }]}
+        style={[styles.picker, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => setPickerOpen(true)}
         disabled={!signedIn}>
-        <Text style={{ color: bankName ? colors.text : colors.textSecondary, fontSize: 16 }}>
+        <Text style={{ color: bankName ? colors.textPrimary : colors.textSecondary, fontSize: 16 }}>
           {bankName || 'Select bank'}
         </Text>
       </Pressable>
@@ -114,7 +110,7 @@ export default function BankScreen() {
       {accountName ? (
         <Card style={{ marginTop: spacing.sm }}>
           <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Account name</Text>
-          <Text style={{ color: brand.primary, fontWeight: '600', fontSize: 16, marginTop: 4 }}>
+          <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 16, marginTop: 4 }}>
             {accountName}
           </Text>
         </Card>
@@ -147,13 +143,13 @@ function SafeAreaBankPicker({
   onSelect,
   onClose,
 }: {
-  colors: (typeof Colors)['light'];
+  colors: ThemeColors;
   onSelect: (code: string, name: string) => void;
   onClose: () => void;
 }) {
   return (
     <View style={[styles.modal, { backgroundColor: colors.background }]}>
-      <Text style={[styles.modalTitle, { color: colors.text }]}>Select bank</Text>
+      <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Select bank</Text>
       <FlatList
         data={NIGERIAN_BANKS}
         keyExtractor={(item) => item.code}
@@ -161,7 +157,7 @@ function SafeAreaBankPicker({
           <Pressable
             style={[styles.bankItem, { borderBottomColor: colors.border }]}
             onPress={() => onSelect(item.code, item.name)}>
-            <Text style={{ color: colors.text, fontSize: 16 }}>{item.name}</Text>
+            <Text style={{ color: colors.textPrimary, fontSize: 16 }}>{item.name}</Text>
           </Pressable>
         )}
       />

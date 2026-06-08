@@ -1,15 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
+import { Button } from '@/components/ui';
 import { Input } from '@/components/Input';
-import Colors from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { messageFromAuthError } from '@/lib/auth-errors';
 import { isValidSignInEmail, requestEmailSignIn } from '@/lib/email-sign-in';
-import { radius, spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { radius, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -20,8 +18,7 @@ export function SignInSecuritySheet({ visible, onClose }: Props) {
   const { user, accountMode } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
   const profileEmail = user?.email?.trim() ?? '';
   const [email, setEmail] = useState(profileEmail);
   const [loading, setLoading] = useState(false);
@@ -58,19 +55,19 @@ export function SignInSecuritySheet({ visible, onClose }: Props) {
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('security.signIn.title')}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('security.signIn.title')}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>{t('security.signIn.hint')}</Text>
 
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>{t('security.signIn.passwordlessTitle')}</Text>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{t('security.signIn.passwordlessTitle')}</Text>
             <Text style={[styles.cardBody, { color: colors.textSecondary }]}>
               {t('security.signIn.passwordlessBody')}
             </Text>
           </View>
 
           {isGuest ? (
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>{t('security.signIn.guestTitle')}</Text>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{t('security.signIn.guestTitle')}</Text>
               <Text style={[styles.cardBody, { color: colors.textSecondary }]}>{t('auth.linkingGuestNote')}</Text>
               <Input
                 label={t('auth.emailLabel')}

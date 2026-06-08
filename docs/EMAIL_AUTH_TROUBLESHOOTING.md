@@ -52,15 +52,28 @@ Without `{{ .Token }}`, you may only get a link — not a 6-digit code.
 | Redirect URLs | Auth → URL configuration | `ajoesusu://**`, `exp://**` |
 | `.env` | Your project | Real `EXPO_PUBLIC_SUPABASE_URL` and anon key |
 
-## 6. While email is broken
+## 6. “Open with” every time you tap the email link (Expo Go)
+
+If the phone asks **which app** to open the link, you are almost certainly using **Expo Go**. Sign-in emails redirect to an `exp://` URL, which iOS and Android treat as generic — several apps can handle it.
+
+**Quick fix (recommended):** use the **6-digit code** from the email on the Verify screen instead of the link.
+
+**If you want the link to work:**
+
+1. When “Open with” appears, choose **Expo Go**.
+2. On Android, tap **Always** so it stops asking.
+3. On iPhone, there is no permanent “Always” for `exp://` — use the code or install a dev build.
+
+**One-tap links (no chooser):** install a **development or TestFlight build** of RoundPay. Those use `ajoesusu://auth/callback`, which opens the app directly. In Supabase redirect URLs, keep both `exp://**` and `ajoesusu://**`.
+
+## 7. While email is broken
 
 1. Enable **Anonymous sign-ins** in Supabase (**Authentication** → **Providers** → **Anonymous**).  
-2. In the app: **Continue as guest (create groups)** on login, or **Guest account** when creating a group.  
-3. **Preview UI only** still cannot save — use guest for real groups.
+2. In the app: **Enter app (no email)** on login, or use guest when creating a group.
 
 Use **Sign in with email** when SMTP works or you need a permanent account.
 
-## 7. Still stuck?
+## 8. Still stuck?
 
 Note from Auth logs:
 

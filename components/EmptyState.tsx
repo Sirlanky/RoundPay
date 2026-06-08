@@ -1,6 +1,7 @@
+import { SymbolView } from 'expo-symbols';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '@/components/ui/Text';
-import { useThemeTokens } from '@/theme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   title: string;
@@ -8,7 +9,7 @@ interface Props {
 }
 
 export function EmptyState({ title, message }: Props) {
-  const { colors, radius, spacing } = useThemeTokens();
+  const { colors, scheme, radius, shadow } = useThemeTokens();
 
   return (
     <View
@@ -20,7 +21,15 @@ export function EmptyState({ title, message }: Props) {
           borderRadius: radius.md,
           padding: spacing.xl,
         },
+        shadow('small'),
       ]}>
+      <View style={[styles.iconCircle, { backgroundColor: primaryAlpha(scheme, 12) }]}>
+        <SymbolView
+          name={{ ios: 'tray', android: 'inbox', web: 'inbox' } as never}
+          tintColor={colors.primary}
+          size={22}
+        />
+      </View>
       <Text variant="headingSmall" style={styles.title}>
         {title}
       </Text>
@@ -37,6 +46,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: 'dashed',
     marginBottom: 16,
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
   },
   title: {
     marginBottom: 8,

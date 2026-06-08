@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
-import Colors, { brand } from '@/constants/Colors';
 import { frequencyLabel } from '@/lib/format';
 import type { MemberWithProfile } from '@/lib/members';
 import {
@@ -14,8 +13,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { AjoGroup, Cycle, Profile } from '@/lib/types';
 import { useGroup } from '@/hooks/useGroup';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { primaryAlpha, spacing, useThemeTokens, type ThemeColors } from '@/theme';
 
 type CycleWithRecipient = Cycle & { recipient?: Profile | null };
 
@@ -25,8 +23,7 @@ export default function PayoutScheduleScreen() {
   const { group, members, loading, error } = useGroup(id);
   const [cycles, setCycles] = useState<CycleWithRecipient[]>([]);
   const [cyclesLoading, setCyclesLoading] = useState(true);
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
 
   const loadCycles = useCallback(async () => {
     if (!id) return;
@@ -59,7 +56,7 @@ export default function PayoutScheduleScreen() {
   if (loading || cyclesLoading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={brand.primary} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
@@ -76,7 +73,7 @@ export default function PayoutScheduleScreen() {
 
   return (
     <Screen safeArea={false} contentStyle={styles.content}>
-      <Text style={[styles.title, { color: colors.text }]}>Payout calendar</Text>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>Payout calendar</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         {isDraft
           ? 'Each row is a collection round. Dates are added when the group starts.'
@@ -84,7 +81,7 @@ export default function PayoutScheduleScreen() {
       </Text>
 
       {schedule.length === 0 ? (
-        <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             No members in the rotation yet.
           </Text>
@@ -92,9 +89,9 @@ export default function PayoutScheduleScreen() {
       ) : (
         months.map((month) => (
           <View key={month.key} style={styles.monthBlock}>
-            <Text style={[styles.monthLabel, { color: colors.text }]}>{month.label}</Text>
+            <Text style={[styles.monthLabel, { color: colors.textPrimary }]}>{month.label}</Text>
             {month.entries.map((entry) => (
-              <ScheduleRow key={entry.round} entry={entry} colors={colors} />
+              <ScheduleRow key={entry.round} entry={entry} colors={colors} scheme={scheme} />
             ))}
           </View>
         ))
@@ -113,9 +110,11 @@ export default function PayoutScheduleScreen() {
 function ScheduleRow({
   entry,
   colors,
+  scheme,
 }: {
   entry: ReturnType<typeof buildPayoutSchedule>[number];
-  colors: (typeof Colors)['light'];
+  colors: ThemeColors;
+  scheme: 'light' | 'dark';
 }) {
   const parts = entry.dueDate ? scheduleDayParts(entry.dueDate) : null;
 
@@ -124,15 +123,15 @@ function ScheduleRow({
       style={[
         styles.row,
         {
-          backgroundColor: colors.card,
-          borderColor: entry.isCurrent ? brand.primary : colors.border,
+          backgroundColor: colors.surface,
+          borderColor: entry.isCurrent ? colors.primary : colors.border,
           borderWidth: entry.isCurrent ? 2 : 1,
         },
       ]}>
-      <View style={[styles.dateCol, { backgroundColor: entry.isCurrent ? brand.primary + '14' : colors.border + '44' }]}>
+      <View style={[styles.dateCol, { backgroundColor: entry.isCurrent ? primaryAlpha(scheme, 16) : colors.border + '44' }]}>
         {parts ? (
           <>
-            <Text style={[styles.dayNum, { color: entry.isCurrent ? brand.primary : colors.text }]}>
+            <Text style={[styles.dayNum, { color: entry.isCurrent ? colors.primary : colors.textPrimary }]}>
               {parts.day}
             </Text>
             <Text style={[styles.weekday, { color: colors.textSecondary }]}>{parts.weekday}</Text>
@@ -144,11 +143,11 @@ function ScheduleRow({
 
       <View style={styles.body}>
         <Text style={[styles.round, { color: colors.textSecondary }]}>Round {entry.round}</Text>
-        <Text style={[styles.name, { color: colors.text }]}>
+        <Text style={[styles.name, { color: colors.textPrimary }]}>
           {entry.collectorName}
           {entry.isYou ? ' (you)' : ''}
         </Text>
-        <Text style={[styles.status, { color: entry.isCurrent ? brand.primary : colors.textSecondary }]}>
+        <Text style={[styles.status, { color: entry.isCurrent ? colors.primary : colors.textSecondary }]}>
           {entry.displayStatus}
           {entry.dateSource === 'estimated' ? ' · Estimated date' : ''}
         </Text>

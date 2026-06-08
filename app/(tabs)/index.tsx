@@ -15,12 +15,10 @@ import {
 import { ProfileSetupBanner } from '@/components/ProfileSetupBanner';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
-import Colors, { brand } from '@/constants/Colors';
 import { useHomeDashboard } from '@/hooks/useHomeDashboard';
 import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 export default function HomeScreen() {
   const { user, profile } = useAuth();
@@ -42,8 +40,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   const isEmptyHome = !hasPrimary;
 
@@ -72,7 +69,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={brand.primary} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }

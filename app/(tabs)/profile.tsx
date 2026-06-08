@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
+import { Button } from '@/components/ui';
 import {
   ActiveDevicesSheet,
   AppLockSheet,
@@ -18,13 +18,13 @@ import {
   ThemePickerSheet,
   TransactionPinSheet,
 } from '@/components/profile';
+import { RoleModeSwitcher } from '@/components/layout/RoleModeSwitcher';
 import { ProfileSetupBanner } from '@/components/ProfileSetupBanner';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { translatePushStatus } from '@/lib/i18n';
-import Colors from '@/constants/Colors';
 import { getLanguageDisplayLabel } from '@/lib/languages';
 import type { TranslationKey } from '@/lib/i18n/keys';
 import type { ThemePreference } from '@/lib/theme';
@@ -62,8 +62,7 @@ import {
 } from '@/lib/reminder-settings';
 import { isTransactionPinEnabled } from '@/lib/transaction-pin';
 import { supabase } from '@/lib/supabase';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -98,8 +97,7 @@ export default function ProfileScreen() {
   const [pushStatus, setPushStatus] = useState<Awaited<ReturnType<typeof getPushPermissionStatus>>>('undetermined');
   const router = useRouter();
   const { openEdit: openEditParam } = useLocalSearchParams<{ openEdit?: string }>();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   useEffect(() => {
     setFormValues(profileToFormValues(profile, user?.email));
@@ -383,6 +381,8 @@ export default function ProfileScreen() {
         onChangePhoto={handleChangePhoto}
         photoLoading={photoLoading}
       />
+
+      <RoleModeSwitcher />
 
       <ProfileAccountActions />
 

@@ -1,27 +1,24 @@
 import { SymbolView } from 'expo-symbols';
 import { StyleSheet, Text, View } from 'react-native';
-import { Card } from '@/components/Card';
+import { Card } from '@/components/ui';
 import { HomeSectionTitle } from './HomeSectionTitle';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
 import { formatDate } from '@/lib/format';
 import type { HomeDashboardData } from '@/lib/home-dashboard';
-import { spacing } from '@/constants/theme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   activities: HomeDashboardData['recentActivity'];
 }
 
 export function HomeRecentActivity({ activities }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
 
   if (activities.length === 0) return null;
 
   return (
     <View style={styles.wrap}>
       <HomeSectionTitle title="Recent activity" />
-      <Card elevated style={styles.list}>
+      <Card variant="elevated" style={styles.list}>
         {activities.map((item, index) => (
           <View
             key={item.id}
@@ -29,7 +26,7 @@ export function HomeRecentActivity({ activities }: Props) {
               styles.row,
               index < activities.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 },
             ]}>
-            <View style={[styles.dot, { backgroundColor: brand.primary + '33' }]}>
+            <View style={[styles.dot, { backgroundColor: primaryAlpha(scheme, 32) }]}>
               <SymbolView
                 name={
                   {
@@ -38,12 +35,12 @@ export function HomeRecentActivity({ activities }: Props) {
                     web: 'payments',
                   } as never
                 }
-                tintColor={brand.primary}
+                tintColor={colors.primary}
                 size={18}
               />
             </View>
             <View style={styles.body}>
-              <Text style={[styles.label, { color: colors.text }]}>{item.label}</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>{item.label}</Text>
               <Text style={[styles.time, { color: colors.textSecondary }]}>
                 {formatDate(item.timestamp)}
               </Text>

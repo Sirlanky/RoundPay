@@ -106,6 +106,62 @@ npx expo start --clear
 
 You should land on **Login** (not Setup). Enter your email and receive an OTP.
 
+## Step 6b — Google & Apple sign-in (optional)
+
+1. **Authentication** → **Providers** → enable **Google** and/or **Apple**.
+2. **Redirect URLs** (same as email): `ajoesusu://**`, `exp://**`, and your Expo Go callback URL.
+3. **Google:** [Google Cloud Console](https://console.cloud.google.com/) → OAuth client → Web client ID + iOS client (bundle `com.roundpay.ajoesusu`) → paste into Supabase Google provider settings. Add redirect: `https://dolcajrcjhsfpyxzwtjk.supabase.co/auth/v1/callback` (your project URL).
+4. **Apple:** [Apple Developer](https://developer.apple.com/) — see **Step 6c** below. Required for OAuth (Expo Go / browser flow). Native iOS builds can use bundle ID only.
+5. In the app: **Continue with Google** / **Continue with Apple** on the login screen.
+
+### Step 6c — Apple Sign In (Client ID + Secret for Supabase)
+
+Apple does **not** give you a permanent secret like Google. You create:
+
+| Supabase field | What it is | Example for RoundPay |
+|----------------|------------|----------------------|
+| **Client IDs** | Bundle ID + Services ID (comma-separated) | `com.roundpay.ajoesusu,com.roundpay.ajoesusu.auth` |
+| **Secret Key** | A **JWT you generate** from a `.p8` file (expires ~every 6 months) | Run `node scripts/generate-apple-oauth-secret.js` |
+
+**Apple Developer setup** ([developer.apple.com/account](https://developer.apple.com/account)):
+
+1. **App ID** — Identifiers → App IDs → your app (or create)  
+   - Bundle ID: `com.roundpay.ajoesusu`  
+   - Enable **Sign in with Apple**
+
+2. **Services ID** (this is your OAuth **Client ID**)  
+   - Identifiers → **Services IDs** → **+**  
+   - Identifier: `com.roundpay.ajoesusu.auth` (you choose; use this pattern)  
+   - Enable **Sign in with Apple** → Configure  
+   - Primary App ID: `com.roundpay.ajoesusu`  
+   - **Domains:** `dolcajrcjhsfpyxzwtjk.supabase.co`  
+   - **Return URLs:** `https://dolcajrcjhsfpyxzwtjk.supabase.co/auth/v1/callback`
+
+3. **Signing Key** (for the secret JWT)  
+   - Keys → **+** → enable **Sign in with Apple** → Register  
+   - Download **`AuthKey_XXXXXXXXXX.p8`** once (you cannot download again)  
+   - Note **Key ID** and your **Team ID** (Membership details)
+
+4. **Generate Secret Key for Supabase:**
+
+```bash
+node scripts/generate-apple-oauth-secret.js \
+  --team-id YOUR_TEAM_ID \
+  --key-id YOUR_KEY_ID \
+  --services-id com.roundpay.ajoesusu.auth \
+  --p8 ./AuthKey_XXXXXXXXXX.p8
+```
+
+5. **Supabase** → Authentication → Providers → **Apple**  
+   - Enable  
+   - **Client IDs:** `com.roundpay.ajoesusu,com.roundpay.ajoesusu.auth`  
+   - **Secret Key:** paste the JWT from the script  
+   - Save
+
+Set a calendar reminder to re-run the script before the JWT expires (~6 months).
+
+Or use Supabase’s generator: [Login with Apple docs](https://supabase.com/docs/guides/auth/social-login/auth-apple) (scroll to secret generator).
+
 ## Optional — Edge Functions (for Paystack)
 
 Needed only when you add Paystack keys.

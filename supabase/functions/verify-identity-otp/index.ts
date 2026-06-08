@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { normalizeEmail } from '../_shared/identity-contact.ts';
+import { normalizeEmail, normalizeNgPhone } from '../_shared/identity-contact.ts';
+import { decodeLocalOtpPayload, verifyLocalOtp } from '../_shared/local-otp.ts';
 import { verifyEmailOtp } from '../_shared/resend-email-otp.ts';
 import { termiiVerifyOtp } from '../_shared/termii.ts';
 
@@ -48,17 +49,38 @@ Deno.serve(async (req) => {
     if (channel === 'phone') {
       const pin_id = profile.phone_otp_reference_id;
       if (!pin_id) throw new Error('No OTP pending. Tap Send code first.');
-      valid = await termiiVerifyOtp({ pin_id, code: code.trim() });
+      const destination = normalizeNgPhone(profile.phone ?? '');
+      const localPayload = decodeLocalOtpPayload(pin_id);
+      if (localPayload) {
+        valid = await verifyLocalOtp({
+          stored: pin_id,
+          code: code.trim(),
+          expectedDestination: destination,
+          channel: 'phone',
+        });
+      } else {
+        valid = await termiiVerifyOtp({ pin_id, code: code.trim() });
+      }
     } else {
       const email = normalizeEmail(profile.email ?? user.email ?? '');
       if (!profile.email_otp_reference_id) {
         throw new Error('No OTP pending. Tap Send code first.');
       }
-      valid = await verifyEmailOtp({
-        stored: profile.email_otp_reference_id,
-        code: code.trim(),
-        expectedEmail: email,
-      });
+      const localPayload = decodeLocalOtpPayload(profile.email_otp_reference_id);
+      if (localPayload) {
+        valid = await verifyLocalOtp({
+          stored: profile.email_otp_reference_id,
+          code: code.trim(),
+          expectedDestination: email,
+          channel: 'email',
+        });
+      } else {
+        valid = await verifyEmailOtp({
+          stored: profile.email_otp_reference_id,
+          code: code.trim(),
+          expectedEmail: email,
+        });
+      }
     }
 
     if (!valid) throw new Error('Invalid or expired code. Request a new OTP and try again.');

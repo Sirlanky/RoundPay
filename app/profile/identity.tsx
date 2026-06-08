@@ -5,6 +5,7 @@ import { Badge, Button, Card, Text } from '@/components/ui';
 import { OtpVerificationCard } from '@/components/OtpVerificationCard';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminMode } from '@/contexts/AdminModeContext';
 import { useTranslation } from '@/contexts/LanguageContext';
 import {
   getIdentityStatus,
@@ -12,13 +13,16 @@ import {
   identityStatusFromProfile,
   isVerifiedAdmin,
   submitIdentityVerification,
+  submitPlaceholderIdentityVerification,
   type IdentityStatus,
 } from '@/lib/identity-verification';
+import { PLACEHOLDER_IDENTITY_ENABLED } from '@/lib/identity-config';
 import {
   getMissingIdentitySetupItems,
   isOtpVerified,
   isPhoneOtpVerified,
   isEmailOtpVerified,
+  isProfileReadyForIdentityVerification,
   isReadyForOtpIdentityComplete,
 } from '@/lib/identity-setup';
 import { messageFromGroupError } from '@/lib/group-errors';
@@ -38,6 +42,7 @@ function statusVariant(status: IdentityStatus): 'neutral' | 'warning' | 'success
 
 export default function IdentityVerificationScreen() {
   const { user, profile, canSave, refreshProfile } = useAuth();
+  const { refreshAdminAccess } = useAdminMode();
   const { t } = useTranslation();
   const navigation = useNavigation();
   const router = useRouter();
@@ -46,6 +51,7 @@ export default function IdentityVerificationScreen() {
 
   const missing = getMissingIdentitySetupItems(profile);
   const profileReady = missing.length === 0;
+  const profileReadyForPlaceholder = isProfileReadyForIdentityVerification(profile);
   const phoneVerified = isPhoneOtpVerified(profile);
   const emailVerified = isEmailOtpVerified(profile);
   const readyToComplete = isReadyForOtpIdentityComplete(profile, user?.email);
@@ -89,6 +95,33 @@ export default function IdentityVerificationScreen() {
               const next = await submitIdentityVerification();
               setStatus(next);
               await refreshProfile();
+              await refreshAdminAccess();
+              Alert.alert(t('identity.submittedTitle'), t('identity.submittedBody'));
+            } catch (e) {
+              Alert.alert('Could not complete verification', messageFromGroupError(e));
+            } finally {
+              setSubmitting(false);
+            }
+          })(),
+      },
+    ]);
+  };
+
+  const handleQuickVerify = () => {
+    if (!user?.id || !canSave || !profileReadyForPlaceholder) return;
+
+    Alert.alert(t('identity.placeholderTitle'), t('identity.placeholderBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('identity.quickVerifyButton'),
+        onPress: () =>
+          void (async () => {
+            setSubmitting(true);
+            try {
+              const next = await submitPlaceholderIdentityVerification();
+              setStatus(next);
+              await refreshProfile();
+              await refreshAdminAccess();
               Alert.alert(t('identity.submittedTitle'), t('identity.submittedBody'));
             } catch (e) {
               Alert.alert('Could not complete verification', messageFromGroupError(e));
@@ -168,6 +201,24 @@ export default function IdentityVerificationScreen() {
             onVerified={() => void refreshProfile()}
           />
         </>
+      ) : null}
+
+      {PLACEHOLDER_IDENTITY_ENABLED && profileReadyForPlaceholder && !isVerifiedAdmin(profile) ? (
+        <Card variant="standard" style={styles.card}>
+          <Text variant="bodyMedium" style={styles.sectionTitle}>
+            {t('identity.quickVerifyTitle')}
+          </Text>
+          <Text variant="bodySmall" color="secondary" style={styles.sectionBody}>
+            {t('identity.quickVerifyBody')}
+          </Text>
+          <Button
+            title={t('identity.quickVerifyButton')}
+            onPress={handleQuickVerify}
+            loading={submitting}
+            variant="secondary"
+            style={styles.editBtn}
+          />
+        </Card>
       ) : null}
 
       {readyToComplete && !isVerifiedAdmin(profile) ? (

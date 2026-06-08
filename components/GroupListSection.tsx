@@ -1,11 +1,9 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { GroupCard } from './GroupCard';
-import { useColorScheme } from './useColorScheme';
-import Colors from '@/constants/Colors';
 import type { GroupBucket } from '@/lib/group-sections';
 import { groupBucketHint, groupBucketLabel } from '@/lib/group-sections';
 import type { AjoGroup } from '@/lib/types';
-import { spacing } from '@/constants/theme';
+import { spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   bucket: GroupBucket;
@@ -15,8 +13,7 @@ interface Props {
 }
 
 export function GroupListSection({ bucket, groups, compact = false }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   if (groups.length === 0) return null;
 
@@ -24,7 +21,7 @@ export function GroupListSection({ bucket, groups, compact = false }: Props) {
 
   return (
     <View style={[styles.wrap, compact && styles.wrapCompact]}>
-      <Text style={[styles.title, compact && styles.titleCompact, { color: colors.text }]}>
+      <Text style={[styles.title, compact && styles.titleCompact, { color: colors.textPrimary }]}>
         {groupBucketLabel(bucket)}
       </Text>
       {!compact ? (

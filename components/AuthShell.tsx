@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Screen } from '@/components/ui/Screen';
-import { useThemeTokens } from '@/theme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
+import { Text } from '@/components/ui';
 
 interface Props {
   children: ReactNode;
@@ -11,30 +12,41 @@ interface Props {
 }
 
 export function AuthShell({ children, title, subtitle, keyboard }: Props) {
-  const { colors, spacing, radius, typography } = useThemeTokens();
+  const { colors, spacing, radius, scheme, shadow } = useThemeTokens();
 
   return (
     <Screen keyboard={keyboard} contentStyle={styles.content}>
       <View style={styles.brandBlock}>
-        <View style={[styles.logoBadge, { backgroundColor: colors.primary, borderRadius: radius.lg }]}>
-          <Text style={[typography.display, styles.logoLetter, { color: colors.textInverse, fontSize: 28 }]}>
+        <View
+          style={[
+            styles.logoBadge,
+            {
+              backgroundColor: colors.primary,
+              borderRadius: radius.xl,
+            },
+            shadow('medium'),
+          ]}>
+          <View style={[styles.logoGlow, { backgroundColor: primaryAlpha(scheme, 32) }]} />
+          <Text variant="display" color="inverse" style={styles.logoLetter}>
             R
           </Text>
         </View>
-        <Text style={[typography.display, styles.brandName, { color: colors.primary, fontSize: 28 }]}>
+        <Text variant="display" style={styles.brandName}>
           RoundPay
         </Text>
-        <Text style={[typography.bodySmall, styles.tagline, { color: colors.textSecondary }]}>
+        <Text variant="bodySmall" color="secondary" style={styles.tagline}>
           Save together. Collect your turn.
         </Text>
       </View>
       {(title || subtitle) && (
         <View style={styles.intro}>
           {title ? (
-            <Text style={[typography.headingMedium, { color: colors.textPrimary }]}>{title}</Text>
+            <Text variant="headingMedium" style={{ color: colors.textPrimary }}>
+              {title}
+            </Text>
           ) : null}
           {subtitle ? (
-            <Text style={[typography.bodySmall, styles.subtitle, { color: colors.textSecondary }]}>
+            <Text variant="bodyMedium" color="secondary" style={styles.subtitle}>
               {subtitle}
             </Text>
           ) : null}
@@ -46,9 +58,10 @@ export function AuthShell({ children, title, subtitle, keyboard }: Props) {
           {
             backgroundColor: colors.surface,
             borderColor: colors.border,
-            borderRadius: radius.lg,
+            borderRadius: radius.xl,
             padding: spacing.lg,
           },
+          shadow('small'),
         ]}>
         {children}
       </View>
@@ -57,21 +70,30 @@ export function AuthShell({ children, title, subtitle, keyboard }: Props) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingTop: 16 },
-  brandBlock: { alignItems: 'center', marginBottom: 24 },
+  content: { paddingTop: spacing.md },
+  brandBlock: { alignItems: 'center', marginBottom: spacing.lg },
   logoBadge: {
-    width: 56,
-    height: 56,
+    width: 64,
+    height: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
   },
-  logoLetter: { fontWeight: '800' },
-  brandName: { fontWeight: '800' },
+  logoGlow: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    top: -20,
+    right: -20,
+  },
+  logoLetter: { fontWeight: '800', fontSize: 30 },
+  brandName: { fontWeight: '800', letterSpacing: -0.5, fontSize: 26 },
   tagline: { marginTop: 4, textAlign: 'center' },
-  intro: { marginBottom: 16 },
-  subtitle: { marginTop: 4, lineHeight: 20 },
+  intro: { marginBottom: spacing.md, paddingHorizontal: spacing.xs },
+  subtitle: { marginTop: spacing.xs, lineHeight: 22, textAlign: 'center' },
   card: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
   },
 });

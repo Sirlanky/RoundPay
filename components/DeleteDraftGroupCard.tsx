@@ -1,9 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Card } from './Card';
-import { useColorScheme } from './useColorScheme';
-import Colors from '@/constants/Colors';
-import { radius, spacing } from '@/constants/theme';
+import { Card } from '@/components/ui';
+import { radius, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   groupName: string;
@@ -12,11 +10,10 @@ interface Props {
 }
 
 export function DeleteDraftGroupCard({ groupName, onPress, loading }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   return (
-    <Card elevated style={styles.wrap}>
+    <Card variant="elevated" style={styles.wrap}>
       <Pressable
         onPress={onPress}
         disabled={loading}
@@ -33,7 +30,7 @@ export function DeleteDraftGroupCard({ groupName, onPress, loading }: Props) {
           )}
         </View>
         <View style={styles.body}>
-          <Text style={[styles.title, { color: colors.text }]}>Delete draft group</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Delete draft group</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={2}>
             Remove "{groupName}" for all members. This cannot be undone.
           </Text>

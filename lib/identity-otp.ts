@@ -21,7 +21,15 @@ export async function sendIdentityOtp(channel: IdentityOtpChannel) {
     throw new Error(parseFunctionError(error, data));
   }
 
-  return (data as { data: { reference_id: string; destination: string; status: string; channel: string } }).data;
+  return (data as {
+    data: {
+      reference_id: string;
+      destination: string;
+      status: string;
+      channel: string;
+      dev_code?: string;
+    };
+  }).data;
 }
 
 export async function verifyIdentityOtp(channel: IdentityOtpChannel, code: string) {

@@ -1,19 +1,16 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Card } from '@/components/Card';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
+import { Card } from '@/components/ui';
 import { formatDate, formatNaira } from '@/lib/format';
 import { nextPayoutRecipientName } from '@/lib/home-dashboard';
 import type { HomeDashboardData } from '@/lib/home-dashboard';
-import { spacing } from '@/constants/theme';
+import { spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   data: HomeDashboardData;
 }
 
 export function HomeNextPayoutCard({ data }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
   const { primaryGroup, currentCycle, totalPot } = data;
 
   if (!primaryGroup || primaryGroup.status !== 'active' || !currentCycle) return null;
@@ -24,11 +21,11 @@ export function HomeNextPayoutCard({ data }: Props) {
   const potAmount = totalPot ?? primaryGroup.contribution_amount * data.memberCount;
 
   return (
-    <Card elevated style={styles.card}>
+    <Card variant="elevated" style={styles.card}>
       <View style={styles.row}>
         <View style={styles.body}>
           <Text style={[styles.label, { color: colors.textSecondary }]}>Next payout</Text>
-          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+          <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>
             {payoutName}
           </Text>
           <Text style={[styles.meta, { color: colors.textSecondary }]}>

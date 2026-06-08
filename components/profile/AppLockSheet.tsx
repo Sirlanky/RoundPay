@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
-import Colors, { brand } from '@/constants/Colors';
+import { Button } from '@/components/ui';
 import { useTranslation } from '@/contexts/LanguageContext';
 import {
   authenticateWithBiometrics,
@@ -11,8 +10,7 @@ import {
   setAppLockEnabled,
   type FaceIdSupport,
 } from '@/lib/app-lock';
-import { radius, spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { primaryAlpha, radius, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -22,8 +20,7 @@ interface Props {
 
 export function AppLockSheet({ visible, onClose, onChanged }: Props) {
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [biometricLabel, setBiometricLabel] = useState('Biometrics');
@@ -82,18 +79,18 @@ export function AppLockSheet({ visible, onClose, onChanged }: Props) {
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('security.appLock.title')}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('security.appLock.title')}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>{t('security.appLock.hint')}</Text>
 
           {supportNotice ? (
-            <View style={[styles.notice, { backgroundColor: brand.primary + '12', borderColor: brand.primary + '33' }]}>
-              <Text style={[styles.noticeText, { color: colors.text }]}>{supportNotice}</Text>
+            <View style={[styles.notice, { backgroundColor: primaryAlpha(scheme, 12), borderColor: primaryAlpha(scheme, 32) }]}>
+              <Text style={[styles.noticeText, { color: colors.textPrimary }]}>{supportNotice}</Text>
             </View>
           ) : null}
 
-          <View style={[styles.row, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.rowBody}>
-              <Text style={[styles.label, { color: colors.text }]}>{t('security.appLock.toggle')}</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('security.appLock.toggle')}</Text>
               <Text style={[styles.rowHint, { color: colors.textSecondary }]}>
                 {canPrompt
                   ? faceIdSupport === 'expo_go'
@@ -106,8 +103,8 @@ export function AppLockSheet({ visible, onClose, onChanged }: Props) {
               value={enabled}
               onValueChange={(value) => void toggle(value)}
               disabled={loading || !canPrompt}
-              trackColor={{ false: colors.border, true: brand.primary + '88' }}
-              thumbColor={enabled ? brand.primary : '#f4f4f5'}
+              trackColor={{ false: colors.border, true: colors.primary + '88' }}
+              thumbColor={enabled ? colors.primary : '#f4f4f5'}
             />
           </View>
         </ScrollView>

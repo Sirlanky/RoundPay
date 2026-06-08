@@ -1,27 +1,24 @@
 import { useRouter } from 'expo-router';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
+import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
-import Colors, { brand } from '@/constants/Colors';
 import { accountModeLabel, canSaveToCloud, getAccountMode } from '@/lib/account-status';
 import { GUEST_SIGN_IN_SETUP } from '@/lib/guest-auth';
 import { alertProfileDatabaseFix, PROFILE_SETUP_FIX_MESSAGE } from '@/lib/profile';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 /** Guest / preview / sign-in controls — shown when user cannot save or needs account actions. */
 export function ProfileAccountActions() {
   const { user, profile, buildMode, signInAsGuest, signOut, exitBuildMode, refreshProfile } = useAuth();
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
   const mode = getAccountMode(user, buildMode);
   const canSave = canSaveToCloud(mode);
 
   const enterAppAsGuest = () => {
     exitBuildMode();
     void signInAsGuest()
-      .then(() => Alert.alert('You’re in', 'Create and manage groups from the Groups tab.'))
+      .then(() => Alert.alert("You're in", 'Create and manage groups from the Groups tab.'))
       .catch((e) =>
         Alert.alert('Could not sign in', e instanceof Error ? e.message : GUEST_SIGN_IN_SETUP)
       );
@@ -66,8 +63,8 @@ export function ProfileAccountActions() {
   return (
     <View style={styles.wrap}>
       {!canSave ? (
-        <View style={[styles.banner, { backgroundColor: brand.primary + '10', borderColor: brand.primary + '33' }]}>
-          <Text style={[styles.bannerTitle, { color: colors.text }]}>
+        <View style={[styles.banner, { backgroundColor: primaryAlpha(scheme, 16), borderColor: primaryAlpha(scheme, 32) }]}>
+          <Text style={[styles.bannerTitle, { color: colors.textPrimary }]}>
             {mode === 'preview' ? 'Preview mode' : 'Sign in to save'}
           </Text>
           <Text style={[styles.bannerBody, { color: colors.textSecondary }]}>
@@ -75,7 +72,7 @@ export function ProfileAccountActions() {
               ? 'You are browsing without saving. Enter the app to create and join groups.'
               : 'Tap Enter app to take control — no email needed if guest sign-in is enabled.'}
           </Text>
-          <Text style={[styles.modeLabel, { color: brand.primary }]}>{accountModeLabel(mode)}</Text>
+          <Text style={[styles.modeLabel, { color: colors.primary }]}>{accountModeLabel(mode)}</Text>
         </View>
       ) : null}
 

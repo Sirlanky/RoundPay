@@ -39,6 +39,9 @@ export function messageFromGroupError(e: unknown): string {
   if (msg.includes('IDENTITY_MIGRATION_REQUIRED') || msg.includes('submit_identity_verification')) {
     return 'Run supabase/migrations/022_identity_verification.sql in Supabase SQL Editor, then try again.';
   }
+  if (msg.includes('PLACEHOLDER_IDENTITY_MIGRATION_REQUIRED') || msg.includes('submit_placeholder_identity_verification')) {
+    return 'Run supabase/migrations/026_placeholder_identity_submit.sql in Supabase SQL Editor, then try again.';
+  }
   if (msg.includes('FREQUENCY_NOT_SUPPORTED') || msg.includes('groups_frequency_check')) {
     return 'Daily schedules need a one-time database update. Run supabase/migrations/021_group_frequency.sql in Supabase SQL Editor, then try again.';
   }

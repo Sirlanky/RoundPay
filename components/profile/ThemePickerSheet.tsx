@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
-import { Button } from '@/components/Button';
-import Colors, { brand } from '@/constants/Colors';
+import { Button } from '@/components/ui';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { BACKGROUND_PRESETS, type BackgroundPresetId } from '@/lib/background-presets';
 import { THEME_OPTIONS, type ThemePreference } from '@/lib/theme';
 import type { TranslationKey } from '@/lib/i18n/keys';
-import { radius, spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { primaryAlpha, radius, spacing, useThemeTokens } from '@/theme';
 
 const THEME_LABEL_KEYS: Record<ThemePreference, TranslationKey> = {
   system: 'theme.system',
@@ -34,8 +32,7 @@ export function ThemePickerSheet({
   onClose,
 }: Props) {
   const { t } = useTranslation();
-  const scheme = useColorScheme();
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
   const [active, setActive] = useState(selected);
   const [activeBackground, setActiveBackground] = useState(selectedBackground);
 
@@ -60,10 +57,10 @@ export function ThemePickerSheet({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('theme.title')}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('theme.title')}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>{t('theme.hint')}</Text>
 
-          <Text style={[styles.section, { color: colors.text }]}>{t('theme.appearanceTitle')}</Text>
+          <Text style={[styles.section, { color: colors.textPrimary }]}>{t('theme.appearanceTitle')}</Text>
           <View style={styles.list}>
             {THEME_OPTIONS.map((option) => {
               const isSelected = active === option.value;
@@ -77,8 +74,8 @@ export function ThemePickerSheet({
                   style={({ pressed }) => [
                     styles.row,
                     {
-                      backgroundColor: isSelected ? brand.primary + '12' : colors.card,
-                      borderColor: isSelected ? brand.primary : colors.border,
+                      backgroundColor: isSelected ? primaryAlpha(scheme, 12) : colors.surface,
+                      borderColor: isSelected ? colors.primary : colors.border,
                       opacity: pressed ? 0.9 : 1,
                     },
                   ]}>
@@ -86,17 +83,17 @@ export function ThemePickerSheet({
                     style={[
                       styles.indicator,
                       {
-                        borderColor: isSelected ? brand.primary : colors.border,
-                        backgroundColor: isSelected ? brand.primary : 'transparent',
+                        borderColor: isSelected ? colors.primary : colors.border,
+                        backgroundColor: isSelected ? colors.primary : 'transparent',
                       },
                     ]}>
                     {isSelected ? <Text style={styles.check}>✓</Text> : null}
                   </View>
-                  <View style={[styles.iconWrap, { backgroundColor: brand.primary + '12' }]}>
-                    <SymbolView name={option.icon as never} tintColor={brand.primary} size={20} />
+                  <View style={[styles.iconWrap, { backgroundColor: primaryAlpha(scheme, 12) }]}>
+                    <SymbolView name={option.icon as never} tintColor={colors.primary} size={20} />
                   </View>
                   <View style={styles.rowBody}>
-                    <Text style={[styles.label, { color: isSelected ? brand.primary : colors.text }]}>
+                    <Text style={[styles.label, { color: isSelected ? colors.primary : colors.textPrimary }]}>
                       {label}
                     </Text>
                   </View>
@@ -105,7 +102,7 @@ export function ThemePickerSheet({
             })}
           </View>
 
-          <Text style={[styles.section, { color: colors.text }]}>{t('theme.backgroundTitle')}</Text>
+          <Text style={[styles.section, { color: colors.textPrimary }]}>{t('theme.backgroundTitle')}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary, marginBottom: spacing.md }]}>
             {t('theme.backgroundHint')}
           </Text>
@@ -121,8 +118,8 @@ export function ThemePickerSheet({
                   style={({ pressed }) => [
                     styles.swatchCard,
                     {
-                      backgroundColor: colors.card,
-                      borderColor: isSelected ? brand.primary : colors.border,
+                      backgroundColor: colors.surface,
+                      borderColor: isSelected ? colors.primary : colors.border,
                       opacity: pressed ? 0.9 : 1,
                     },
                   ]}>
@@ -138,12 +135,12 @@ export function ThemePickerSheet({
                   <Text
                     style={[
                       styles.swatchLabel,
-                      { color: isSelected ? brand.primary : colors.text },
+                      { color: isSelected ? colors.primary : colors.textPrimary },
                     ]}>
                     {t(preset.labelKey)}
                   </Text>
                   {isSelected ? (
-                    <View style={[styles.swatchBadge, { backgroundColor: brand.primary }]}>
+                    <View style={[styles.swatchBadge, { backgroundColor: colors.primary }]}>
                       <Text style={styles.swatchBadgeText}>✓</Text>
                     </View>
                   ) : null}

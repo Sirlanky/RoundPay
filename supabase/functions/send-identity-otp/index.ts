@@ -1,10 +1,19 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { maskEmail, maskPhone, normalizeEmail, normalizeNgPhone } from '../_shared/identity-contact.ts';
+import { createLocalOtp } from '../_shared/local-otp.ts';
 import { resendEmailOtp } from '../_shared/resend-email-otp.ts';
 import { termiiSendOtp } from '../_shared/termii.ts';
 
 type Channel = 'phone' | 'email';
+
+function hasTermii(): boolean {
+  return Boolean(Deno.env.get('TERMII_API_KEY')?.trim());
+}
+
+function hasResend(): boolean {
+  return Boolean(Deno.env.get('RESEND_API_KEY')?.trim() && Deno.env.get('RESEND_FROM_EMAIL')?.trim());
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -46,13 +55,22 @@ Deno.serve(async (req) => {
     let destination: string;
     let reference_id: string;
     let status: string;
+    let dev_code: string | undefined;
 
     if (channel === 'phone') {
       if (!profile.phone?.trim()) throw new Error('Add your phone number in Profile first.');
       destination = normalizeNgPhone(profile.phone);
-      const result = await termiiSendOtp(destination);
-      reference_id = result.pin_id;
-      status = result.status;
+
+      if (hasTermii()) {
+        const result = await termiiSendOtp(destination);
+        reference_id = result.pin_id;
+        status = result.status;
+      } else {
+        const local = await createLocalOtp({ channel: 'phone', destination });
+        reference_id = local.reference_id;
+        status = 'dev';
+        dev_code = local.dev_code;
+      }
       referenceColumn = 'phone_otp_reference_id';
     } else {
       const email = normalizeEmail(profile.email ?? user.email ?? '');
@@ -63,10 +81,19 @@ Deno.serve(async (req) => {
           .eq('id', user.id);
         if (emailSyncError) throw emailSyncError;
       }
-      const result = await resendEmailOtp(email);
-      destination = result.destination;
-      reference_id = result.reference_id;
-      status = 'sent';
+
+      if (hasResend()) {
+        const result = await resendEmailOtp(email);
+        destination = result.destination;
+        reference_id = result.reference_id;
+        status = 'sent';
+      } else {
+        const local = await createLocalOtp({ channel: 'email', destination: email });
+        destination = email;
+        reference_id = local.reference_id;
+        status = 'dev';
+        dev_code = local.dev_code;
+      }
       referenceColumn = 'email_otp_reference_id';
     }
 
@@ -89,6 +116,7 @@ Deno.serve(async (req) => {
           destination: maskedDestination,
           status,
           channel,
+          ...(dev_code ? { dev_code } : {}),
         },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

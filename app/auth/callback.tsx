@@ -2,18 +2,18 @@ import { useGlobalSearchParams, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
+import { Button } from '@/components/ui';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { brand } from '@/constants/Colors';
 import { createSessionFromUrl } from '@/lib/auth';
 import { getPendingSignInEmail } from '@/lib/pending-sign-in-email';
 import { callbackUrlFromParams, urlHasAuthParams } from '@/lib/redirect';
-import { spacing } from '@/constants/theme';
+import { spacing, useThemeTokens } from '@/theme';
 
 export default function AuthCallbackScreen() {
   const router = useRouter();
   const params = useGlobalSearchParams<Record<string, string | string[]>>();
   const { t } = useTranslation();
+  const { colors } = useThemeTokens();
   const [message, setMessage] = useState(t('auth.callbackSigningIn'));
   const [failed, setFailed] = useState(false);
 
@@ -67,9 +67,9 @@ export default function AuthCallbackScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {!failed ? <ActivityIndicator size="large" color={brand.primary} /> : null}
-      <Text style={styles.text}>{message}</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {!failed ? <ActivityIndicator size="large" color={colors.primary} /> : null}
+      <Text style={[styles.text, { color: colors.textSecondary }]}>{message}</Text>
       {failed ? (
         <>
           <Button title={t('auth.verifyCode')} onPress={() => void goVerify()} style={styles.btn} />
@@ -91,8 +91,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
-    backgroundColor: '#F8FAF9',
   },
-  text: { marginTop: spacing.lg, fontSize: 15, textAlign: 'center', lineHeight: 22, color: '#334155' },
+  text: { marginTop: spacing.lg, fontSize: 15, textAlign: 'center', lineHeight: 22 },
   btn: { marginTop: spacing.md, alignSelf: 'stretch' },
 });

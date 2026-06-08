@@ -4,6 +4,10 @@ export type TranslationKey =
   | 'nav.contributions'
   | 'nav.alerts'
   | 'nav.profile'
+  | 'nav.dashboard'
+  | 'nav.ledger'
+  | 'nav.payouts'
+  | 'nav.more'
   | 'common.cancel'
   | 'common.done'
   | 'common.save'
@@ -11,11 +15,25 @@ export type TranslationKey =
   | 'common.join'
   | 'common.comingSoon'
   | 'common.ok'
+  | 'common.gotIt'
   | 'common.goToProfile'
+  | 'common.loading'
   | 'home.welcomeBack'
   | 'home.welcomeBackName'
   | 'home.startFirstCircle'
   | 'home.startFirstCircleSubtitle'
+  | 'home.circleBadge'
+  | 'home.featureSecure'
+  | 'home.featureSchedule'
+  | 'home.featureTurns'
+  | 'home.featureSecureDesc'
+  | 'home.featureScheduleDesc'
+  | 'home.featureTurnsDesc'
+  | 'home.featureSecureDetail'
+  | 'home.featureScheduleDetail'
+  | 'home.featureTurnsDetail'
+  | 'home.featureLearnMore'
+  | 'home.invitationsHint'
   | 'home.noActiveCircle'
   | 'home.noActiveCircleSubtitle'
   | 'home.createGroup'
@@ -129,6 +147,9 @@ export type TranslationKey =
   | 'auth.signInEmail'
   | 'auth.loginTitle'
   | 'auth.loginSubtitle'
+  | 'auth.simpleLoginSubtitle'
+  | 'auth.simpleLoginBody'
+  | 'auth.enterAppButton'
   | 'auth.guestRecommend'
   | 'auth.enterAppNoEmail'
   | 'auth.emailOptionalDivider'
@@ -177,6 +198,13 @@ export type TranslationKey =
   | 'auth.noEmailTip'
   | 'auth.enterCodeError'
   | 'auth.configureSupabaseFirst'
+  | 'auth.expoGoOpenWithHint'
+  | 'auth.appLinkHint'
+  | 'auth.orContinueWith'
+  | 'auth.continueWithGoogle'
+  | 'auth.continueWithApple'
+  | 'auth.oauthFailed'
+  | 'auth.oauthSetupHint'
   | 'payouts.notInAppBody'
   | 'payouts.summary'
   | 'payouts.totalReceived'
@@ -380,6 +408,9 @@ export type TranslationKey =
   | 'identity.verifiedOtpNote'
   | 'identity.otpBadge'
   | 'identity.adminRequirementNote'
+  | 'identity.quickVerifyTitle'
+  | 'identity.quickVerifyBody'
+  | 'identity.quickVerifyButton'
   | 'otp.phoneTitle'
   | 'otp.phoneSubtitle'
   | 'otp.phoneVerified'
@@ -393,6 +424,7 @@ export type TranslationKey =
   | 'otp.codePlaceholder'
   | 'otp.verifyCode'
   | 'otp.expiryHint'
+  | 'otp.devCodeHint'
   | 'otp.sendFailedTitle'
   | 'otp.verifyFailedTitle'
   | 'otp.missingCodeTitle'
@@ -401,7 +433,61 @@ export type TranslationKey =
   | 'groupAdmin.verifyRequiredTitle'
   | 'groupAdmin.verifyRequiredNotStarted'
   | 'groupAdmin.verifyRequiredInReview'
-  | 'groupAdmin.verifyButton';
+  | 'groupAdmin.verifyButton'
+  | 'admin.modeLabel'
+  | 'admin.modeManaging'
+  | 'admin.modeParticipating'
+  | 'admin.modeSwitch'
+  | 'admin.dashboardTitle'
+  | 'admin.dashboardSubtitle'
+  | 'admin.kpiGroups'
+  | 'admin.kpiActiveCount'
+  | 'admin.kpiMembers'
+  | 'admin.kpiReceived'
+  | 'admin.kpiOutstanding'
+  | 'admin.kpiPending'
+  | 'admin.kpiPayouts'
+  | 'admin.createGroup'
+  | 'admin.viewLedger'
+  | 'admin.groupHealth'
+  | 'admin.groupProgress'
+  | 'admin.nextPayout'
+  | 'admin.dateTbd'
+  | 'admin.noGroupsYet'
+  | 'admin.noGroupsHint'
+  | 'admin.verifyIdentity'
+  | 'admin.recentActivity'
+  | 'admin.ledgerIntro'
+  | 'admin.searchLabel'
+  | 'admin.searchPlaceholder'
+  | 'admin.filterAll'
+  | 'admin.filterPending'
+  | 'admin.filterPaid'
+  | 'admin.filterFailed'
+  | 'admin.ledgerEmpty'
+  | 'admin.cycleLabel'
+  | 'admin.payoutsIntro'
+  | 'admin.payoutsEmpty'
+  | 'admin.readyPayout'
+  | 'admin.collecting'
+  | 'admin.moreOperations'
+  | 'admin.moreAccount'
+  | 'admin.membersHub'
+  | 'admin.transparencyCenter'
+  | 'admin.reports'
+  | 'admin.currentPlan'
+  | 'admin.moreFooter'
+  | 'admin.transparencyTitle'
+  | 'admin.transparencySubtitle'
+  | 'admin.transparencyEmpty'
+  | 'admin.payContribution'
+  | 'admin.viewSchedule'
+  | 'admin.groupAdminTitle'
+  | 'admin.groupAdminDenied'
+  | 'admin.groupAdminSubtitle'
+  | 'admin.manageGroup'
+  | 'admin.inviteMembers'
+  | 'admin.groupNotes';
 
 export const TRANSLATION_KEYS: TranslationKey[] = [
   'nav.home',
@@ -409,6 +495,10 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'nav.contributions',
   'nav.alerts',
   'nav.profile',
+  'nav.dashboard',
+  'nav.ledger',
+  'nav.payouts',
+  'nav.more',
   'common.cancel',
   'common.done',
   'common.save',
@@ -416,11 +506,25 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'common.join',
   'common.comingSoon',
   'common.ok',
+  'common.gotIt',
   'common.goToProfile',
+  'common.loading',
   'home.welcomeBack',
   'home.welcomeBackName',
   'home.startFirstCircle',
   'home.startFirstCircleSubtitle',
+  'home.circleBadge',
+  'home.featureSecure',
+  'home.featureSchedule',
+  'home.featureTurns',
+  'home.featureSecureDesc',
+  'home.featureScheduleDesc',
+  'home.featureTurnsDesc',
+  'home.featureSecureDetail',
+  'home.featureScheduleDetail',
+  'home.featureTurnsDetail',
+  'home.featureLearnMore',
+  'home.invitationsHint',
   'home.noActiveCircle',
   'home.noActiveCircleSubtitle',
   'home.createGroup',
@@ -534,6 +638,9 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'auth.signInEmail',
   'auth.loginTitle',
   'auth.loginSubtitle',
+  'auth.simpleLoginSubtitle',
+  'auth.simpleLoginBody',
+  'auth.enterAppButton',
   'auth.guestRecommend',
   'auth.enterAppNoEmail',
   'auth.emailOptionalDivider',
@@ -582,6 +689,13 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'auth.noEmailTip',
   'auth.enterCodeError',
   'auth.configureSupabaseFirst',
+  'auth.expoGoOpenWithHint',
+  'auth.appLinkHint',
+  'auth.orContinueWith',
+  'auth.continueWithGoogle',
+  'auth.continueWithApple',
+  'auth.oauthFailed',
+  'auth.oauthSetupHint',
   'payouts.notInAppBody',
   'payouts.summary',
   'payouts.totalReceived',
@@ -785,6 +899,9 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'identity.verifiedOtpNote',
   'identity.otpBadge',
   'identity.adminRequirementNote',
+  'identity.quickVerifyTitle',
+  'identity.quickVerifyBody',
+  'identity.quickVerifyButton',
   'otp.phoneTitle',
   'otp.phoneSubtitle',
   'otp.phoneVerified',
@@ -798,6 +915,7 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'otp.codePlaceholder',
   'otp.verifyCode',
   'otp.expiryHint',
+  'otp.devCodeHint',
   'otp.sendFailedTitle',
   'otp.verifyFailedTitle',
   'otp.missingCodeTitle',
@@ -807,4 +925,58 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'groupAdmin.verifyRequiredNotStarted',
   'groupAdmin.verifyRequiredInReview',
   'groupAdmin.verifyButton',
+  'admin.modeLabel',
+  'admin.modeManaging',
+  'admin.modeParticipating',
+  'admin.modeSwitch',
+  'admin.dashboardTitle',
+  'admin.dashboardSubtitle',
+  'admin.kpiGroups',
+  'admin.kpiActiveCount',
+  'admin.kpiMembers',
+  'admin.kpiReceived',
+  'admin.kpiOutstanding',
+  'admin.kpiPending',
+  'admin.kpiPayouts',
+  'admin.createGroup',
+  'admin.viewLedger',
+  'admin.groupHealth',
+  'admin.groupProgress',
+  'admin.nextPayout',
+  'admin.dateTbd',
+  'admin.noGroupsYet',
+  'admin.noGroupsHint',
+  'admin.verifyIdentity',
+  'admin.recentActivity',
+  'admin.ledgerIntro',
+  'admin.searchLabel',
+  'admin.searchPlaceholder',
+  'admin.filterAll',
+  'admin.filterPending',
+  'admin.filterPaid',
+  'admin.filterFailed',
+  'admin.ledgerEmpty',
+  'admin.cycleLabel',
+  'admin.payoutsIntro',
+  'admin.payoutsEmpty',
+  'admin.readyPayout',
+  'admin.collecting',
+  'admin.moreOperations',
+  'admin.moreAccount',
+  'admin.membersHub',
+  'admin.transparencyCenter',
+  'admin.reports',
+  'admin.currentPlan',
+  'admin.moreFooter',
+  'admin.transparencyTitle',
+  'admin.transparencySubtitle',
+  'admin.transparencyEmpty',
+  'admin.payContribution',
+  'admin.viewSchedule',
+  'admin.groupAdminTitle',
+  'admin.groupAdminDenied',
+  'admin.groupAdminSubtitle',
+  'admin.manageGroup',
+  'admin.inviteMembers',
+  'admin.groupNotes',
 ];

@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@/components/Button';
-import Colors, { brand } from '@/constants/Colors';
+import { Button } from '@/components/ui';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { NIGERIAN_LANGUAGES, type AppLanguage } from '@/lib/languages';
-import { radius, spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { primaryAlpha, radius, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -16,8 +14,7 @@ interface Props {
 
 export function LanguagePickerSheet({ visible, selected, onSelect, onClose }: Props) {
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
   const [active, setActive] = useState(selected);
 
   useEffect(() => {
@@ -33,7 +30,7 @@ export function LanguagePickerSheet({ visible, selected, onSelect, onClose }: Pr
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('language.title')}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('language.title')}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>{t('language.hint')}</Text>
 
           <View style={styles.list}>
@@ -48,8 +45,8 @@ export function LanguagePickerSheet({ visible, selected, onSelect, onClose }: Pr
                   style={({ pressed }) => [
                     styles.row,
                     {
-                      backgroundColor: isSelected ? brand.primary + '12' : colors.card,
-                      borderColor: isSelected ? brand.primary : colors.border,
+                      backgroundColor: isSelected ? primaryAlpha(scheme, 12) : colors.surface,
+                      borderColor: isSelected ? colors.primary : colors.border,
                       opacity: pressed ? 0.9 : 1,
                     },
                   ]}>
@@ -57,14 +54,14 @@ export function LanguagePickerSheet({ visible, selected, onSelect, onClose }: Pr
                     style={[
                       styles.indicator,
                       {
-                        borderColor: isSelected ? brand.primary : colors.border,
-                        backgroundColor: isSelected ? brand.primary : 'transparent',
+                        borderColor: isSelected ? colors.primary : colors.border,
+                        backgroundColor: isSelected ? colors.primary : 'transparent',
                       },
                     ]}>
                     {isSelected ? <Text style={styles.check}>✓</Text> : null}
                   </View>
                   <View style={styles.rowBody}>
-                    <Text style={[styles.label, { color: isSelected ? brand.primary : colors.text }]}>
+                    <Text style={[styles.label, { color: isSelected ? colors.primary : colors.textPrimary }]}>
                       {option.label}
                     </Text>
                     {option.nativeLabel !== option.label ? (
@@ -72,8 +69,8 @@ export function LanguagePickerSheet({ visible, selected, onSelect, onClose }: Pr
                     ) : null}
                   </View>
                   {isSelected ? (
-                    <View style={[styles.selectedBadge, { backgroundColor: brand.primary + '18' }]}>
-                      <Text style={[styles.selectedBadgeText, { color: brand.primary }]}>
+                    <View style={[styles.selectedBadge, { backgroundColor: primaryAlpha(scheme, 24) }]}>
+                      <Text style={[styles.selectedBadgeText, { color: colors.primary }]}>
                         {t('language.selected')}
                       </Text>
                     </View>

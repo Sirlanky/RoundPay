@@ -2,10 +2,8 @@ import React, { createContext, useCallback, useContext, useState } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { PinEntry } from '@/components/security/PinEntry';
 import { useTranslation } from '@/contexts/LanguageContext';
-import Colors from '@/constants/Colors';
 import { isTransactionPinEnabled, TRANSACTION_PIN_LENGTH, verifyTransactionPin } from '@/lib/transaction-pin';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 interface TransactionPinContextValue {
   requestTransactionPin: () => Promise<boolean>;
@@ -15,8 +13,7 @@ const TransactionPinContext = createContext<TransactionPinContextValue | undefin
 
 export function TransactionPinProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
   const [visible, setVisible] = useState(false);
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | undefined>();
@@ -62,7 +59,7 @@ export function TransactionPinProvider({ children }: { children: React.ReactNode
       {children}
       <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => finish(false)}>
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('security.pin.verifyTitle')}</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('security.pin.verifyTitle')}</Text>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>{t('security.pin.verifyHint')}</Text>
           {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
           <PinEntry

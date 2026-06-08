@@ -3,14 +3,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { AdminVerificationBanner, useCanAdministerGroup } from '@/components/AdminVerificationBanner';
 import { AuthActionBanner } from '@/components/AuthActionBanner';
-import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
+import { Button, Card } from '@/components/ui';
 import { GroupCreatedSuccess } from '@/components/GroupCreatedSuccess';
 import { GroupFrequencyPicker } from '@/components/GroupFrequencyPicker';
 import { Input } from '@/components/Input';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
-import Colors, { brand } from '@/constants/Colors';
+import { useAdminMode } from '@/contexts/AdminModeContext';
 import { useSupportedGroupFrequencies } from '@/hooks/useSupportedGroupFrequencies';
 import { pickDefaultFrequency } from '@/lib/group-frequency-support';
 import { messageFromGroupError } from '@/lib/group-errors';
@@ -19,11 +18,11 @@ import { poolSummary, validateCreateGroupInput } from '@/lib/group-validation';
 import { createGroup } from '@/lib/groups';
 import { promptSaveAuth } from '@/lib/prompt-save-auth';
 import type { AjoGroup, GroupFrequency } from '@/lib/types';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 export default function CreateGroupScreen() {
   const { user, profile, canSave, exitBuildMode, signInAsGuest } = useAuth();
+  const { refreshAdminAccess } = useAdminMode();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [maxMembers, setMaxMembers] = useState('10');
@@ -34,8 +33,7 @@ export default function CreateGroupScreen() {
   const [created, setCreated] = useState<AjoGroup | null>(null);
   const [formHint, setFormHint] = useState('');
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
   const { supported, loading: freqLoading } = useSupportedGroupFrequencies();
   const canAdminister = useCanAdministerGroup();
 
@@ -109,6 +107,7 @@ export default function CreateGroupScreen() {
               adminParticipates,
             });
             setCreated(group as AjoGroup);
+            void refreshAdminAccess();
           } catch (e) {
             const msg = messageFromGroupError(e);
             setFormHint(msg);
@@ -139,6 +138,7 @@ export default function CreateGroupScreen() {
         adminParticipates,
       });
       setCreated(group as AjoGroup);
+      void refreshAdminAccess();
     } catch (e) {
       const msg = messageFromGroupError(e);
       setFormHint(msg);
@@ -177,7 +177,7 @@ export default function CreateGroupScreen() {
       <AdminVerificationBanner />
 
       <Card>
-        <Text style={[styles.section, { color: colors.text }]}>Basics</Text>
+        <Text style={[styles.section, { color: colors.textPrimary }]}>Basics</Text>
         <Input label="Group name" value={name} onChangeText={setName} placeholder="e.g. Office Ajo" />
         <Input
           label="Contribution per member (₦)"
@@ -187,7 +187,7 @@ export default function CreateGroupScreen() {
           placeholder="50000"
         />
 
-        <Text style={[styles.label, { color: colors.text }]}>How often?</Text>
+        <Text style={[styles.label, { color: colors.textPrimary }]}>How often?</Text>
         <GroupFrequencyPicker
           value={frequency}
           onChange={setFrequency}
@@ -202,7 +202,7 @@ export default function CreateGroupScreen() {
       </Card>
 
       <Card>
-        <Text style={[styles.section, { color: colors.text }]}>Size & fees</Text>
+        <Text style={[styles.section, { color: colors.textPrimary }]}>Size & fees</Text>
         <Input label="Max members" value={maxMembers} onChangeText={setMaxMembers} keyboardType="number-pad" />
         <Input
           label="Admin fee (%)"
@@ -219,7 +219,7 @@ export default function CreateGroupScreen() {
       <Card>
         <View style={styles.participationRow}>
           <View style={styles.participationCopy}>
-            <Text style={[styles.section, { color: colors.text, marginBottom: 4 }]}>Your role</Text>
+            <Text style={[styles.section, { color: colors.textPrimary, marginBottom: 4 }]}>Your role</Text>
             <Text style={[styles.feeHint, { color: colors.textSecondary, marginTop: 0 }]}>
               {adminParticipates
                 ? 'You will contribute and collect on your turn like other members.'
@@ -229,19 +229,19 @@ export default function CreateGroupScreen() {
           <Switch
             value={adminParticipates}
             onValueChange={setAdminParticipates}
-            trackColor={{ false: colors.border, true: brand.primary + '88' }}
-            thumbColor={adminParticipates ? brand.primary : colors.textSecondary}
+            trackColor={{ false: colors.border, true: colors.primary + '88' }}
+            thumbColor={adminParticipates ? colors.primary : colors.textSecondary}
           />
         </View>
-        <Text style={[styles.participationLabel, { color: colors.text }]}>
+        <Text style={[styles.participationLabel, { color: colors.textPrimary }]}>
           {adminParticipates ? 'I will contribute' : 'Organizer only'}
         </Text>
       </Card>
 
       {summary ? (
         <Card>
-          <Text style={[styles.section, { color: colors.text }]}>Summary</Text>
-          <Text style={[styles.summary, { color: colors.text }]}>{summary}</Text>
+          <Text style={[styles.section, { color: colors.textPrimary }]}>Summary</Text>
+          <Text style={[styles.summary, { color: colors.textPrimary }]}>{summary}</Text>
         </Card>
       ) : (
         <Text style={[styles.formHint, { color: colors.textSecondary }]}>

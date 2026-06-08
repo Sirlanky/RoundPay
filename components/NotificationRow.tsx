@@ -1,10 +1,8 @@
 import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useColorScheme } from '@/components/useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
 import { formatDate } from '@/lib/format';
 import type { AppNotification, NotificationType } from '@/lib/types';
-import { radius, spacing } from '@/constants/theme';
+import { primaryAlpha, radius, spacing, useThemeTokens } from '@/theme';
 
 const TYPE_ICONS: Record<
   NotificationType,
@@ -26,8 +24,7 @@ interface Props {
 }
 
 export function NotificationRow({ notification, onPress }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors, scheme } = useThemeTokens();
   const isUnread = !notification.read_at;
   const icon = TYPE_ICONS[notification.type] ?? TYPE_ICONS.payment_confirmed;
 
@@ -39,19 +36,19 @@ export function NotificationRow({ notification, onPress }: Props) {
         style={[
           styles.row,
           {
-            backgroundColor: isUnread ? brand.primary + '08' : colors.card,
+            backgroundColor: isUnread ? primaryAlpha(scheme, 8) : colors.surface,
             borderColor: colors.border,
           },
         ]}>
-        <View style={[styles.iconWrap, { backgroundColor: brand.primary + '14' }]}>
-          <SymbolView name={icon as never} tintColor={brand.primary} size={20} />
+        <View style={[styles.iconWrap, { backgroundColor: primaryAlpha(scheme, 16) }]}>
+          <SymbolView name={icon as never} tintColor={colors.primary} size={20} />
         </View>
         <View style={styles.body}>
           <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+            <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>
               {notification.title}
             </Text>
-            {isUnread ? <View style={[styles.unreadDot, { backgroundColor: brand.primary }]} /> : null}
+            {isUnread ? <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} /> : null}
           </View>
           <Text style={[styles.message, { color: colors.textSecondary }]} numberOfLines={3}>
             {notification.message}

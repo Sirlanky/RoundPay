@@ -7,6 +7,7 @@ module.exports = {
     ios: {
       ...(appJson.expo.ios ?? {}),
       bundleIdentifier: 'com.roundpay.ajoesusu',
+      usesAppleSignIn: true,
       infoPlist: {
         ...(appJson.expo.ios?.infoPlist ?? {}),
         ITSAppUsesNonExemptEncryption: false,
@@ -15,6 +16,13 @@ module.exports = {
     android: {
       ...(appJson.expo.android ?? {}),
       package: 'com.roundpay.ajoesusu',
+      intentFilters: [
+        {
+          action: 'VIEW',
+          data: [{ scheme: 'ajoesusu' }],
+          category: ['BROWSABLE', 'DEFAULT'],
+        },
+      ],
     },
     plugins: [
       ...(appJson.expo.plugins ?? []),

@@ -54,6 +54,28 @@ export async function submitIdentityVerification(): Promise<IdentityStatus> {
   return normalizeIdentityStatus(profile?.identity_status ?? 'in_review');
 }
 
+export async function submitPlaceholderIdentityVerification(): Promise<IdentityStatus> {
+  const { data, error } = await supabase.rpc('submit_placeholder_identity_verification');
+
+  if (error) {
+    if (isPlaceholderRpcMissing(error)) {
+      throw new Error('PLACEHOLDER_IDENTITY_MIGRATION_REQUIRED');
+    }
+    throw error;
+  }
+
+  const profile = data as { identity_status?: unknown } | null;
+  return normalizeIdentityStatus(profile?.identity_status ?? 'verified');
+}
+
+function isPlaceholderRpcMissing(error: { code?: string; message?: string }): boolean {
+  return (
+    error.code === 'PGRST202' ||
+    (error.message?.includes('submit_placeholder_identity_verification') ?? false) ||
+    (error.message?.includes('Could not find the function') ?? false)
+  );
+}
+
 export async function assertCanAdministerGroup(
   userId: string,
   profile?: Pick<Profile, 'identity_status'> | null

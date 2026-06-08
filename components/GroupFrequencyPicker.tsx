@@ -1,9 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useColorScheme } from './useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
 import { FREQUENCY_OPTIONS } from '@/lib/group-frequency';
 import type { GroupFrequency } from '@/lib/types';
-import { spacing } from '@/constants/theme';
+import { spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   value: GroupFrequency;
@@ -14,8 +12,7 @@ interface Props {
 }
 
 export function GroupFrequencyPicker({ value, onChange, supported, disabled }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   const options = supported
     ? FREQUENCY_OPTIONS.filter((o) => supported.includes(o.value))
@@ -32,13 +29,13 @@ export function GroupFrequencyPicker({ value, onChange, supported, disabled }: P
             style={[
               styles.chip,
               {
-                backgroundColor: selected ? brand.primary : colors.background,
-                borderColor: brand.primary,
+                backgroundColor: selected ? colors.primary : colors.background,
+                borderColor: colors.primary,
                 opacity: disabled ? 0.5 : 1,
               },
             ]}
             onPress={() => onChange(option.value)}>
-            <Text style={{ color: selected ? '#fff' : colors.text, fontWeight: '600', fontSize: 13 }}>
+            <Text style={{ color: selected ? '#fff' : colors.textPrimary, fontWeight: '600', fontSize: 13 }}>
               {option.chipLabel}
             </Text>
           </Pressable>

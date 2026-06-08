@@ -1,9 +1,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
-import { Button } from './Button';
-import { useColorScheme } from './useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
-import { spacing } from '@/constants/theme';
+import { Button } from '@/components/ui';
+import { spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   groupName: string;
@@ -11,8 +9,7 @@ interface Props {
 }
 
 export function InviteCodeCard({ groupName, inviteCode }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   const copyCode = async () => {
     await Clipboard.setStringAsync(inviteCode);
@@ -30,8 +27,8 @@ export function InviteCodeCard({ groupName, inviteCode }: Props) {
     <View style={[styles.box, { backgroundColor: colors.background }]}>
       <Text style={[styles.label, { color: colors.textSecondary }]}>Invite code</Text>
       <Pressable onPress={copyCode} accessibilityRole="button" accessibilityLabel="Copy invite code">
-        <Text style={[styles.code, { color: colors.text }]}>{inviteCode}</Text>
-        <Text style={[styles.tapHint, { color: brand.primary }]}>Tap code to copy</Text>
+        <Text style={[styles.code, { color: colors.textPrimary }]}>{inviteCode}</Text>
+        <Text style={[styles.tapHint, { color: colors.primary }]}>Tap code to copy</Text>
       </Pressable>
       <View style={styles.actions}>
         <Button title="Copy code" onPress={copyCode} variant="secondary" style={styles.btn} />

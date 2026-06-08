@@ -1,26 +1,23 @@
 import { useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Card } from '@/components/Card';
+import { Card } from '@/components/ui';
 import { DraftGroupPanel } from '@/components/DraftGroupPanel';
 import { InviteCodeCard } from '@/components/InviteCodeCard';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
-import Colors, { brand } from '@/constants/Colors';
 import { useGroup } from '@/hooks/useGroup';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 export default function InviteMembersScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { group, members, loading, error } = useGroup(id);
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={brand.primary} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
@@ -38,7 +35,7 @@ export default function InviteMembersScreen() {
 
   return (
     <Screen safeArea={false} contentStyle={styles.content}>
-      <Text style={[styles.title, { color: colors.text }]}>{group.name}</Text>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{group.name}</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         {isDraft
           ? 'Share the invite code so friends can join before you start the group.'

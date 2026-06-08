@@ -1,14 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Button } from './Button';
-import { Card } from './Card';
+import { Button, Card } from '@/components/ui';
 import { StatusBadge } from './StatusBadge';
-import { useColorScheme } from './useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
 import { formatNaira } from '@/lib/format';
 import { memberDisplayName, type MemberWithProfile } from '@/lib/members';
 import { isPaystackConfigured } from '@/lib/paystack';
 import type { Contribution, Cycle } from '@/lib/types';
-import { spacing } from '@/constants/theme';
+import { spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   cycle: Cycle | null;
@@ -33,8 +30,7 @@ export function CyclePaymentsPanel({
   onRecordPayment,
   recordingId,
 }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
   const totalCount = contributions.length;
   const pendingCount = totalCount - paidCount;
   const allPaid = totalCount > 0 && pendingCount === 0;
@@ -47,7 +43,7 @@ export function CyclePaymentsPanel({
   if (contributions.length === 0) {
     return (
       <Card style={styles.wrap}>
-        <Text style={[styles.title, { color: colors.text }]}>Payments this cycle</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Payments this cycle</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Cycle {cycle.cycle_number} — payment rows missing.
         </Text>
@@ -60,7 +56,7 @@ export function CyclePaymentsPanel({
 
   return (
     <Card style={styles.wrap}>
-      <Text style={[styles.title, { color: colors.text }]}>Payments this cycle</Text>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>Payments this cycle</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         {paidCount} paid · {pendingCount} waiting
         {allPaid ? ' · Ready for payout' : ''}
@@ -89,7 +85,7 @@ export function CyclePaymentsPanel({
             style={[styles.row, { backgroundColor: colors.background, borderColor: colors.border }]}>
             <View style={[styles.dot, { backgroundColor: isPaid ? colors.success : colors.error }]} />
             <View style={styles.main}>
-              <Text style={[styles.name, { color: colors.text }]}>
+              <Text style={[styles.name, { color: colors.textPrimary }]}>
                 {member ? memberDisplayName(member) : 'Member'}
                 {isYou ? ' (you)' : ''}
               </Text>
@@ -116,8 +112,8 @@ export function CyclePaymentsPanel({
               <Pressable
                 onPress={() => onRecordPayment(c.id)}
                 disabled={isRecording}
-                style={[styles.recordBtn, { borderColor: brand.primary }]}>
-                <Text style={{ color: brand.primary, fontWeight: '600', fontSize: 13 }}>
+                style={[styles.recordBtn, { borderColor: colors.primary }]}>
+                <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>
                   {isRecording ? 'Saving…' : 'Record payment'}
                 </Text>
               </Pressable>
@@ -127,7 +123,7 @@ export function CyclePaymentsPanel({
       })}
 
       {isAdmin && allPaid && cycle.status === 'completed' ? (
-        <Text style={[styles.adminHint, { color: brand.primary }]}>
+        <Text style={[styles.adminHint, { color: colors.primary }]}>
           Everyone has paid. Tap Record payout sent below.
         </Text>
       ) : null}

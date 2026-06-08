@@ -1,9 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { EmptyState } from './EmptyState';
-import { useColorScheme } from './useColorScheme';
-import Colors, { brand } from '@/constants/Colors';
 import { membersStillNeeded, rosterIsComplete } from '@/lib/group-validation';
-import { spacing } from '@/constants/theme';
+import { spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   memberCount: number;
@@ -13,16 +11,15 @@ interface Props {
 }
 
 export function DraftGroupPanel({ memberCount, maxMembers, isAdmin, adminParticipates }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
   const spotsLeft = membersStillNeeded(memberCount, maxMembers);
   const rosterComplete = rosterIsComplete(memberCount, maxMembers);
   const fillRatio = maxMembers > 0 ? memberCount / maxMembers : 0;
 
   return (
     <View style={styles.wrap}>
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Setting up your Ajo</Text>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Setting up your Ajo</Text>
         <Text style={[styles.body, { color: colors.textSecondary }]}>
           {isAdmin
             ? adminParticipates
@@ -32,7 +29,7 @@ export function DraftGroupPanel({ memberCount, maxMembers, isAdmin, adminPartici
         </Text>
 
         <View style={[styles.track, { backgroundColor: colors.background }]}>
-          <View style={[styles.fill, { width: `${Math.min(100, fillRatio * 100)}%`, backgroundColor: brand.primary }]} />
+          <View style={[styles.fill, { width: `${Math.min(100, fillRatio * 100)}%`, backgroundColor: colors.primary }]} />
         </View>
         <Text style={[styles.stats, { color: colors.textSecondary }]}>
           {memberCount}/{maxMembers} members
@@ -50,7 +47,7 @@ export function DraftGroupPanel({ memberCount, maxMembers, isAdmin, adminPartici
           }
         />
       ) : isAdmin ? (
-        <Text style={[styles.ready, { color: brand.primary }]}>
+        <Text style={[styles.ready, { color: colors.primary }]}>
           Roster full — ready to start cycle 1.
         </Text>
       ) : (

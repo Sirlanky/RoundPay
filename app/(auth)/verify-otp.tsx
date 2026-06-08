@@ -12,6 +12,7 @@ import {
   verifyEmailSignIn,
 } from '@/lib/email-sign-in';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { isExpoGo } from '@/lib/redirect';
 import { spacing } from '@/constants/theme';
 import { useThemeTokens } from '@/theme';
 
@@ -108,6 +109,9 @@ export default function VerifyOtpScreen() {
 
   return (
     <AuthShell title={t('auth.verifyTitle')} subtitle={t('auth.verifySubtitle', { email })} keyboard>
+      <Text style={[styles.help, { color: colors.textSecondary }]}>
+        {isExpoGo() ? t('auth.expoGoOpenWithHint') : t('auth.appLinkHint')}
+      </Text>
       <Text style={[styles.help, { color: colors.textSecondary }]}>{t('auth.verifyHelp')}</Text>
       <Input
         label={t('auth.codeLabel')}

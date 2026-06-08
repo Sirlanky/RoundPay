@@ -8,15 +8,13 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Button } from '@/components/Button';
+import { Button } from '@/components/ui';
 import { GroupFrequencyPicker } from '@/components/GroupFrequencyPicker';
 import { Input } from '@/components/Input';
-import Colors from '@/constants/Colors';
 import { frequencyLabel } from '@/lib/group-frequency';
 import { poolSummary, validateCreateGroupInput } from '@/lib/group-validation';
 import type { AjoGroup, GroupFrequency } from '@/lib/types';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 export interface DraftGroupFormValues {
   name: string;
@@ -50,8 +48,7 @@ export function EditDraftGroupSheet({
   onSave,
   onClose,
 }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   const validation = validateCreateGroupInput({
     name: values.name,
@@ -85,7 +82,7 @@ export function EditDraftGroupSheet({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Edit group settings</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>Edit group settings</Text>
             <Pressable onPress={onClose} hitSlop={8}>
               <Text style={[styles.close, { color: colors.textSecondary }]}>Cancel</Text>
             </Pressable>
@@ -105,7 +102,7 @@ export function EditDraftGroupSheet({
             keyboardType="number-pad"
           />
 
-          <Text style={[styles.label, { color: colors.text }]}>How often?</Text>
+          <Text style={[styles.label, { color: colors.textPrimary }]}>How often?</Text>
           <GroupFrequencyPicker
             value={values.frequency}
             onChange={(frequency) => onChange({ frequency })}
@@ -125,7 +122,7 @@ export function EditDraftGroupSheet({
           ) : null}
 
           {summary ? (
-            <Text style={[styles.summary, { color: colors.text }]}>
+            <Text style={[styles.summary, { color: colors.textPrimary }]}>
               {summary} · {frequencyLabel(values.frequency).toLowerCase()} contributions
             </Text>
           ) : null}

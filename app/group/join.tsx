@@ -2,19 +2,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
 import { AuthActionBanner } from '@/components/AuthActionBanner';
-import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
+import { Button, Card } from '@/components/ui';
 import { GroupJoinPreviewCard } from '@/components/GroupJoinPreviewCard';
 import { Input } from '@/components/Input';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
-import Colors from '@/constants/Colors';
 import { messageFromGroupError } from '@/lib/group-errors';
 import { isValidInviteCode } from '@/lib/group-validation';
 import { joinGroup, previewGroupByInviteCode, type GroupJoinPreview } from '@/lib/groups';
 import { promptSaveAuth } from '@/lib/prompt-save-auth';
-import { spacing } from '@/constants/theme';
-import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, useThemeTokens } from '@/theme';
 
 export default function JoinGroupScreen() {
   const { user, exitBuildMode, signInAsGuest } = useAuth();
@@ -24,8 +21,7 @@ export default function JoinGroupScreen() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
-  const colors = Colors[scheme];
+  const { colors } = useThemeTokens();
 
   useEffect(() => {
     if (code) setInviteCode(code.toString().toUpperCase());
