@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
-import { AdminVerificationBanner, useCanAdministerGroup } from '@/components/AdminVerificationBanner';
 import { AuthActionBanner } from '@/components/AuthActionBanner';
 import { Button, Card } from '@/components/ui';
 import { GroupCreatedSuccess } from '@/components/GroupCreatedSuccess';
@@ -21,7 +20,7 @@ import type { AjoGroup, GroupFrequency } from '@/lib/types';
 import { spacing, useThemeTokens } from '@/theme';
 
 export default function CreateGroupScreen() {
-  const { user, profile, canSave, exitBuildMode, signInAsGuest } = useAuth();
+  const { user, canSave, exitBuildMode, signInAsGuest } = useAuth();
   const { refreshAdminAccess } = useAdminMode();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -35,7 +34,6 @@ export default function CreateGroupScreen() {
   const router = useRouter();
   const { colors } = useThemeTokens();
   const { supported, loading: freqLoading } = useSupportedGroupFrequencies();
-  const canAdminister = useCanAdministerGroup();
 
   useEffect(() => {
     if (!supported.includes(frequency)) {
@@ -75,16 +73,6 @@ export default function CreateGroupScreen() {
       return;
     }
 
-    if (!canAdminister) {
-      Alert.alert(
-        'Identity verification required',
-        profile?.identity_status === 'in_review'
-          ? 'Your identity is in review. You can create a group once verification is approved.'
-          : 'Verify your identity before creating a group as admin.'
-      );
-      return;
-    }
-
     if (!canSave) {
       promptSaveAuth({
         action: 'create a group',
@@ -103,7 +91,6 @@ export default function CreateGroupScreen() {
               maxMembers: validation.data.maxMembers,
               adminFeePercent: validation.data.adminFeePercent,
               adminUser: guest,
-              adminProfile: null,
               adminParticipates,
             });
             setCreated(group as AjoGroup);
@@ -134,7 +121,6 @@ export default function CreateGroupScreen() {
         maxMembers: validation.data.maxMembers,
         adminFeePercent: validation.data.adminFeePercent,
         adminUser: user,
-        adminProfile: profile,
         adminParticipates,
       });
       setCreated(group as AjoGroup);
@@ -174,8 +160,6 @@ export default function CreateGroupScreen() {
       </Text>
 
       <AuthActionBanner action="create a group" />
-      <AdminVerificationBanner />
-
       <Card>
         <Text style={[styles.section, { color: colors.textPrimary }]}>Basics</Text>
         <Input label="Group name" value={name} onChangeText={setName} placeholder="e.g. Office Ajo" />
@@ -251,12 +235,7 @@ export default function CreateGroupScreen() {
 
       {formHint ? <Text style={[styles.formHint, { color: colors.error }]}>{formHint}</Text> : null}
 
-      <Button
-        title={buttonTitle}
-        onPress={handleCreate}
-        loading={loading}
-        disabled={!canAdminister}
-      />
+      <Button title={buttonTitle} onPress={handleCreate} loading={loading} />
     </Screen>
   );
 }

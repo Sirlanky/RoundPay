@@ -50,7 +50,7 @@ export function AdminStatCard({ label, value, hint, accent = 'default', onPress 
   if (!onPress) return body;
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1, flex: 1 }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}>
       {body}
     </Pressable>
   );
@@ -58,8 +58,6 @@ export function AdminStatCard({ label, value, hint, accent = 'default', onPress 
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
-    minWidth: '46%',
     padding: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
   },

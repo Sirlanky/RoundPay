@@ -2,7 +2,6 @@ import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { RoundPayTabBar } from '@/components/navigation/RoundPayTabBar';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdminMode } from '@/contexts/AdminModeContext';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { typography, useThemeTokens } from '@/theme';
@@ -20,17 +19,10 @@ export default function TabLayout() {
 function TabLayoutInner() {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
-  const { mode, canAdmin, loading } = useAdminMode();
-
-  const isAdminMode = canAdmin && mode === 'admin';
-
-  if (loading) {
-    return null;
-  }
 
   return (
     <Tabs
-      initialRouteName={isAdminMode ? 'dashboard' : 'index'}
+      initialRouteName="index"
       tabBar={(props) => <RoundPayTabBar {...props} />}
       screenOptions={{
         headerShown: true,
@@ -41,24 +33,17 @@ function TabLayoutInner() {
         tabBarHideOnKeyboard: true,
         sceneStyle: { backgroundColor: colors.background },
       }}>
-      <Tabs.Screen name="dashboard" options={{ title: t('nav.dashboard'), href: isAdminMode ? undefined : null }} />
-      <Tabs.Screen name="index" options={{ title: t('nav.home'), href: isAdminMode ? null : undefined }} />
+      {/* One tab bar for everyone. Admin abilities surface contextually. */}
+      <Tabs.Screen name="index" options={{ title: t('nav.home') }} />
       <Tabs.Screen name="groups" options={{ title: t('nav.groups') }} />
-      <Tabs.Screen name="ledger" options={{ title: t('nav.ledger'), href: isAdminMode ? undefined : null }} />
-      <Tabs.Screen
-        name="contributions"
-        options={{ title: t('nav.contributions'), href: isAdminMode ? null : undefined }}
-      />
-      <Tabs.Screen
-        name="payouts"
-        options={{ title: t('nav.payouts'), href: isAdminMode ? undefined : null }}
-      />
-      <Tabs.Screen
-        name="notifications"
-        options={{ title: t('nav.alerts'), href: isAdminMode ? null : undefined }}
-      />
-      <Tabs.Screen name="more" options={{ title: t('nav.more'), href: isAdminMode ? undefined : null }} />
-      <Tabs.Screen name="profile" options={{ title: t('nav.profile'), href: isAdminMode ? null : undefined }} />
+      <Tabs.Screen name="contributions" options={{ title: t('nav.contributions') }} />
+      <Tabs.Screen name="notifications" options={{ title: t('nav.alerts') }} />
+      <Tabs.Screen name="profile" options={{ title: t('nav.profile') }} />
+
+      {/* Non-tab routes, reachable via in-screen links. */}
+      <Tabs.Screen name="ledger" options={{ title: t('nav.ledger'), href: null }} />
+      <Tabs.Screen name="payouts" options={{ title: t('nav.payouts'), href: null }} />
+      <Tabs.Screen name="more" options={{ title: t('nav.more'), href: null }} />
       <Tabs.Screen name="transparency" options={{ href: null }} />
     </Tabs>
   );

@@ -1,6 +1,5 @@
 import { useRouter, type Href } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { RoleModeSwitcher } from '@/components/layout/RoleModeSwitcher';
 import { ProfileSettingsRow } from '@/components/profile/ProfileSettingsRow';
 import { Screen } from '@/components/Screen';
 import { Card, Text } from '@/components/ui';
@@ -15,8 +14,6 @@ export default function AdminMoreScreen() {
 
   return (
     <Screen tabBarInset contentStyle={styles.content}>
-      <RoleModeSwitcher />
-
       <Text variant="headingSmall" style={styles.section}>
         {t('admin.moreOperations')}
       </Text>

@@ -1,9 +1,8 @@
-import { assertCanAdministerGroup } from './identity-verification';
 import { generateInviteCode } from './format';
 import { isFrequencyConstraintError, refreshSupportedGroupFrequencies } from './group-frequency-support';
 import { ensureProfile } from './profile';
 import { supabase } from './supabase';
-import type { AjoGroup, GroupFrequency, Profile } from './types';
+import type { AjoGroup, GroupFrequency } from './types';
 import type { User } from '@supabase/supabase-js';
 
 export async function createGroup(params: {
@@ -13,12 +12,10 @@ export async function createGroup(params: {
   maxMembers: number;
   adminFeePercent: number;
   adminUser: User;
-  adminProfile?: Pick<Profile, 'identity_status'> | null;
   /** When false, admin organizes only and is not added to the rotation. Default true. */
   adminParticipates?: boolean;
 }) {
   await ensureProfile(params.adminUser);
-  await assertCanAdministerGroup(params.adminUser.id, params.adminProfile ?? null);
 
   const inviteCode = generateInviteCode();
   const { data: group, error } = await supabase

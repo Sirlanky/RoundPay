@@ -18,7 +18,9 @@ export function AdminKpiGrid({ items }: Props) {
   return (
     <View style={styles.grid}>
       {items.map((item) => (
-        <AdminStatCard key={item.label} {...item} />
+        <View key={item.label} style={styles.cell}>
+          <AdminStatCard {...item} />
+        </View>
       ))}
     </View>
   );
@@ -29,5 +31,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  cell: {
+    flexBasis: '47%',
+    flexGrow: 1,
   },
 });

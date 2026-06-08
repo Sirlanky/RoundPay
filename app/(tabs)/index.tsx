@@ -1,6 +1,8 @@
 import { useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useAdminMode } from '@/contexts/AdminModeContext';
+import { HomeManagingSection } from '@/components/home/HomeManagingSection';
 import {
   HomeGroupSwitcher,
   HomeHeader,
@@ -41,6 +43,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const { managesGroups } = useAdminMode();
 
   const isEmptyHome = !hasPrimary;
 
@@ -84,6 +87,8 @@ export default function HomeScreen() {
       <HomeHeader profile={profile} user={user} variant={isEmptyHome ? 'welcome' : 'dashboard'} />
 
       <ProfileSetupBanner profile={profile} />
+
+      {managesGroups && user?.id ? <HomeManagingSection userId={user.id} /> : null}
 
       {loadError ? <Text style={[styles.error, { color: colors.error }]}>{loadError}</Text> : null}
 

@@ -18,7 +18,6 @@ import {
   ThemePickerSheet,
   TransactionPinSheet,
 } from '@/components/profile';
-import { RoleModeSwitcher } from '@/components/layout/RoleModeSwitcher';
 import { ProfileSetupBanner } from '@/components/ProfileSetupBanner';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
@@ -381,8 +380,6 @@ export default function ProfileScreen() {
         onChangePhoto={handleChangePhoto}
         photoLoading={photoLoading}
       />
-
-      <RoleModeSwitcher />
 
       <ProfileAccountActions />
 

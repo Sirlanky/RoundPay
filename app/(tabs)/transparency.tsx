@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { HomeHeroCard, HomeNextPayoutCard, HomeRecentActivity, HomeStatusStrip } from '@/components/home';
-import { RoleModeSwitcher } from '@/components/layout/RoleModeSwitcher';
 import { Screen } from '@/components/Screen';
 import { Button, Card, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,8 +34,6 @@ export default function TransparencyScreen() {
 
   return (
     <Screen tabBarInset refreshing={refreshing} onRefresh={onRefresh} contentStyle={styles.content}>
-      <RoleModeSwitcher />
-
       <Text variant="display" style={styles.title}>
         {t('admin.transparencyTitle')}
       </Text>

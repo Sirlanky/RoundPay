@@ -4,16 +4,14 @@ import { useCallback, useContext } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { TAB_BAR_FLOAT_GAP } from '@/components/navigation/tab-bar-layout';
-import { getActiveTabConfig, isTabInConfig } from '@/components/navigation/tab-bar-config';
+import { ACTIVE_TAB_CONFIG, isTabInConfig } from '@/components/navigation/tab-bar-config';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { useAdminMode } from '@/contexts/AdminModeContext';
 import { useNotificationUnreadCount } from '@/contexts/NotificationsContext';
 import { navigationRadius, spacing, typography, useThemeTokens } from '@/theme';
 
 export function RoundPayTabBar({ state, navigation, insets }: BottomTabBarProps) {
   const { t } = useTranslation();
-  const { mode } = useAdminMode();
-  const tabConfig = getActiveTabConfig(mode);
+  const tabConfig = ACTIVE_TAB_CONFIG;
   const theme = useThemeTokens();
   const { colors, shadow } = theme;
   const unreadCount = useNotificationUnreadCount();
@@ -45,7 +43,7 @@ export function RoundPayTabBar({ state, navigation, insets }: BottomTabBarProps)
           shadow('large'),
         ]}>
         {state.routes.map((route) => {
-          if (!isTabInConfig(route.name, mode)) return null;
+          if (!isTabInConfig(route.name)) return null;
 
           const config = tabConfig[route.name];
           if (!config) return null;
@@ -53,10 +51,7 @@ export function RoundPayTabBar({ state, navigation, insets }: BottomTabBarProps)
           const isFocused = route.key === focusedKey;
           const icon = isFocused && config.iconFocused ? config.iconFocused : config.icon;
           const badge =
-            (route.name === 'notifications' || (mode === 'admin' && route.name === 'more')) &&
-            unreadCount > 0
-              ? unreadCount
-              : undefined;
+            route.name === 'notifications' && unreadCount > 0 ? unreadCount : undefined;
           const iconColor = isFocused ? colors.textInverse : colors.tabIconDefault;
           const labelColor = isFocused ? colors.textInverse : colors.tabIconDefault;
 

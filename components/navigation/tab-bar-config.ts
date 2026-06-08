@@ -82,10 +82,9 @@ export const ADMIN_TAB_CONFIG: Record<AdminTabRouteName, TabConfig> = {
 /** @deprecated Use MEMBER_TAB_CONFIG */
 export const TAB_CONFIG = MEMBER_TAB_CONFIG;
 
-export function getActiveTabConfig(mode: 'admin' | 'member'): Record<string, TabConfig> {
-  return mode === 'admin' ? ADMIN_TAB_CONFIG : MEMBER_TAB_CONFIG;
-}
+/** The single, unified tab bar shown to every user. */
+export const ACTIVE_TAB_CONFIG: Record<string, TabConfig> = MEMBER_TAB_CONFIG;
 
-export function isTabInConfig(name: string, mode: 'admin' | 'member'): boolean {
-  return name in getActiveTabConfig(mode);
+export function isTabInConfig(name: string): boolean {
+  return name in ACTIVE_TAB_CONFIG;
 }
