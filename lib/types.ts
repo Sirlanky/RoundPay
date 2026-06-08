@@ -1,4 +1,11 @@
-export type GroupFrequency = 'daily' | 'weekly' | 'monthly';
+export type IntervalUnit = 'day' | 'week' | 'month';
+
+/**
+ * Contribution frequency. Stored as a flexible interval token like `week:1`,
+ * `day:2`, or `month:2` (every N units). Legacy values `daily` | `weekly` |
+ * `monthly` are still understood for backward compatibility.
+ */
+export type GroupFrequency = string;
 export type GroupStatus = 'draft' | 'active' | 'completed';
 export type MemberRole = 'admin' | 'member';
 export type CycleStatus = 'open' | 'collecting' | 'completed' | 'paid_out';

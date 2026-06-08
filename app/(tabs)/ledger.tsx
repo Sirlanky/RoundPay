@@ -1,6 +1,8 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { InitialsAvatar } from '@/components/admin/InitialsAvatar';
+import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { Card, Input, StatusBadge, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,29 +14,37 @@ import { spacing, useThemeTokens } from '@/theme';
 
 type Filter = ContributionStatus | 'all';
 
+function isFilter(value: string | undefined): value is Filter {
+  return value === 'all' || value === 'pending' || value === 'paid' || value === 'failed';
+}
+
 export default function AdminLedgerScreen() {
   const { user } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const { colors } = useThemeTokens();
-  const [rows, setRows] = useState<LedgerRow[]>([]);
+  const params = useLocalSearchParams<{ groupId?: string; status?: string }>();
+  const groupId = typeof params.groupId === 'string' ? params.groupId : undefined;
+  const [allRows, setAllRows] = useState<LedgerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<Filter>(isFilter(params.status) ? params.status : 'all');
   const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
     if (!user?.id) {
-      setRows([]);
+      setAllRows([]);
       setLoading(false);
       return;
     }
     try {
-      setRows(await fetchAdminLedger(user.id, { status: filter, query: query.trim() || undefined }));
+      setAllRows(await fetchAdminLedger(user.id, { status: 'all', groupId }));
+    } catch {
+      setAllRows([]);
     } finally {
       setLoading(false);
     }
-  }, [filter, query, user?.id]);
+  }, [groupId, user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,6 +52,27 @@ export default function AdminLedgerScreen() {
       void load();
     }, [load])
   );
+
+  const totals = useMemo(() => {
+    let collected = 0;
+    let outstanding = 0;
+    for (const row of allRows) {
+      if (row.status === 'paid') collected += row.amount;
+      else if (row.status === 'pending') outstanding += row.amount;
+    }
+    return { collected, outstanding };
+  }, [allRows]);
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return allRows.filter((row) => {
+      if (filter !== 'all' && row.status !== filter) return false;
+      if (q && !row.memberName.toLowerCase().includes(q) && !row.groupName.toLowerCase().includes(q)) {
+        return false;
+      }
+      return true;
+    });
+  }, [allRows, filter, query]);
 
   const filters: { id: Filter; label: string }[] = useMemo(
     () => [
@@ -53,13 +84,15 @@ export default function AdminLedgerScreen() {
     [t]
   );
 
-  if (loading && !rows.length) {
+  if (loading && !allRows.length) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
+
+  const scopedName = groupId ? allRows[0]?.groupName : undefined;
 
   return (
     <Screen
@@ -72,15 +105,34 @@ export default function AdminLedgerScreen() {
       }}
       contentStyle={styles.content}>
       <Text variant="bodyMedium" color="secondary" style={styles.intro}>
-        {t('admin.ledgerIntro')}
+        {scopedName ?? t('admin.ledgerIntro')}
       </Text>
+
+      <Card variant="elevated" style={styles.summary}>
+        <View style={styles.summaryCell}>
+          <Text variant="caption" color="secondary">
+            {t('admin.kpiReceived')}
+          </Text>
+          <Text variant="headingMedium" color="success" style={styles.summaryValue}>
+            {formatNaira(totals.collected)}
+          </Text>
+        </View>
+        <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
+        <View style={styles.summaryCell}>
+          <Text variant="caption" color="secondary">
+            {t('admin.kpiOutstanding')}
+          </Text>
+          <Text variant="headingMedium" style={styles.summaryValue}>
+            {formatNaira(totals.outstanding)}
+          </Text>
+        </View>
+      </Card>
 
       <Input
         label={t('admin.searchLabel')}
         placeholder={t('admin.searchPlaceholder')}
         value={query}
         onChangeText={setQuery}
-        onSubmitEditing={() => void load()}
       />
 
       <View style={styles.filters}>
@@ -106,9 +158,7 @@ export default function AdminLedgerScreen() {
       </View>
 
       {!rows.length ? (
-        <Card variant="standard">
-          <Text variant="bodyMedium">{t('admin.ledgerEmpty')}</Text>
-        </Card>
+        <EmptyState title={t('nav.ledger')} message={t('admin.ledgerEmpty')} />
       ) : (
         rows.map((row) => (
           <Pressable
@@ -116,20 +166,21 @@ export default function AdminLedgerScreen() {
             onPress={() => router.push(`/group/${row.groupId}`)}
             style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}>
             <Card variant="standard" style={styles.row}>
-              <View style={styles.rowTop}>
-                <Text variant="bodyMedium" style={styles.member}>
+              <InitialsAvatar name={row.memberName} />
+              <View style={styles.rowBody}>
+                <Text variant="bodyMedium" style={styles.member} numberOfLines={1}>
                   {row.memberName}
                 </Text>
-                <StatusBadge status={row.status} />
+                <Text variant="caption" color="secondary" numberOfLines={1}>
+                  {row.groupName} · {t('admin.cycleLabel', { n: row.cycleNumber })}
+                </Text>
               </View>
-              <Text variant="caption" color="secondary">
-                {row.groupName} · {t('admin.cycleLabel', { n: row.cycleNumber })}
-              </Text>
-              <View style={styles.rowBottom}>
+              <View style={styles.rowRight}>
                 <Text variant="bodyLarge" style={styles.amount}>
                   {formatNaira(row.amount)}
                 </Text>
-                <Text variant="caption" color="muted">
+                <StatusBadge status={row.status} />
+                <Text variant="caption" color="muted" style={styles.date}>
                   {row.status === 'paid' && row.paidAt
                     ? formatDate(row.paidAt)
                     : row.dueDate
@@ -149,6 +200,15 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xl },
   intro: { marginBottom: spacing.md, lineHeight: 22 },
+  summary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+  },
+  summaryCell: { flex: 1, alignItems: 'center', gap: 2 },
+  summaryValue: { fontWeight: '800' },
+  summaryDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', marginVertical: 2 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
   chip: {
     paddingHorizontal: spacing.md,
@@ -156,14 +216,15 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  row: { marginBottom: spacing.sm },
-  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
-  member: { fontWeight: '700', flex: 1 },
-  rowBottom: {
+  row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.sm,
+    gap: spacing.md,
+    marginBottom: spacing.sm,
   },
+  rowBody: { flex: 1, gap: 2 },
+  member: { fontWeight: '700' },
+  rowRight: { alignItems: 'flex-end', gap: 4 },
   amount: { fontWeight: '800' },
+  date: { marginTop: 0 },
 });

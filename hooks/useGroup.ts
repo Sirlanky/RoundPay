@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { AjoGroup, Cycle, GroupMember } from '@/lib/types';
 
 export function useGroup(groupId: string | undefined) {
+  // Unique per hook instance so multiple screens can observe the same group
+  // without colliding on a shared realtime channel topic.
+  const instanceId = useRef(Math.random().toString(36).slice(2)).current;
   const [group, setGroup] = useState<AjoGroup | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [currentCycle, setCurrentCycle] = useState<Cycle | null>(null);
@@ -55,7 +58,7 @@ export function useGroup(groupId: string | undefined) {
     if (!groupId) return;
 
     const channel = supabase
-      .channel(`group-${groupId}`)
+      .channel(`group-${groupId}-${instanceId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: `id=eq.${groupId}` }, fetchGroup)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members', filter: `group_id=eq.${groupId}` }, fetchGroup)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cycles', filter: `group_id=eq.${groupId}` }, fetchGroup)
@@ -64,7 +67,7 @@ export function useGroup(groupId: string | undefined) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [groupId, fetchGroup]);
+  }, [groupId, fetchGroup, instanceId]);
 
   return { group, members, currentCycle, loading, error, refetch: fetchGroup };
 }

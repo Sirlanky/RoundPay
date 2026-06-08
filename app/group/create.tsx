@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { AuthActionBanner } from '@/components/AuthActionBanner';
 import { Button, Card } from '@/components/ui';
@@ -9,8 +9,6 @@ import { Input } from '@/components/Input';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminMode } from '@/contexts/AdminModeContext';
-import { useSupportedGroupFrequencies } from '@/hooks/useSupportedGroupFrequencies';
-import { pickDefaultFrequency } from '@/lib/group-frequency-support';
 import { messageFromGroupError } from '@/lib/group-errors';
 import { alertProfileDatabaseFix, isProfileDatabaseFixError } from '@/lib/profile';
 import { poolSummary, validateCreateGroupInput } from '@/lib/group-validation';
@@ -27,21 +25,12 @@ export default function CreateGroupScreen() {
   const [maxMembers, setMaxMembers] = useState('10');
   const [adminFee, setAdminFee] = useState('0');
   const [adminParticipates, setAdminParticipates] = useState(true);
-  const [frequency, setFrequency] = useState<GroupFrequency>('weekly');
+  const [frequency, setFrequency] = useState<GroupFrequency>('week:1');
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState<AjoGroup | null>(null);
   const [formHint, setFormHint] = useState('');
   const router = useRouter();
   const { colors } = useThemeTokens();
-  const { supported, loading: freqLoading } = useSupportedGroupFrequencies();
-
-  useEffect(() => {
-    if (!supported.includes(frequency)) {
-      setFrequency(pickDefaultFrequency(supported));
-    }
-  }, [supported, frequency]);
-
-  const allFrequenciesSupported = supported.length >= 3;
 
   const validation = useMemo(
     () =>
@@ -172,17 +161,7 @@ export default function CreateGroupScreen() {
         />
 
         <Text style={[styles.label, { color: colors.textPrimary }]}>How often?</Text>
-        <GroupFrequencyPicker
-          value={frequency}
-          onChange={setFrequency}
-          supported={supported}
-          disabled={freqLoading}
-        />
-        {!allFrequenciesSupported && !freqLoading ? (
-          <Text style={[styles.freqHint, { color: colors.textSecondary }]}>
-            Daily needs the database update — run 021_group_frequency.sql in Supabase if you have not already.
-          </Text>
-        ) : null}
+        <GroupFrequencyPicker value={frequency} onChange={setFrequency} />
       </Card>
 
       <Card>

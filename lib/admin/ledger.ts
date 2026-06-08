@@ -30,10 +30,13 @@ type RawRow = {
 
 export async function fetchAdminLedger(
   userId: string,
-  filters?: { status?: ContributionStatus | 'all'; query?: string }
+  filters?: { status?: ContributionStatus | 'all'; query?: string; groupId?: string }
 ): Promise<LedgerRow[]> {
   const groups = await getAdminGroups(userId);
-  const groupIds = new Set(groups.map((g) => g.id));
+  let groupIds = new Set(groups.map((g) => g.id));
+  if (filters?.groupId) {
+    groupIds = new Set(groupIds.has(filters.groupId) ? [filters.groupId] : []);
+  }
   if (!groupIds.size) return [];
 
   const { data: cycles } = await supabase.from('cycles').select('id').in('group_id', [...groupIds]);
@@ -50,7 +53,7 @@ export async function fetchAdminLedger(
       paid_at,
       user_id,
       cycles (cycle_number, due_date, groups (id, name)),
-      profiles (full_name)
+      profiles:profiles!contributions_user_id_fkey (full_name)
     `
     )
     .in('cycle_id', cycleIds)

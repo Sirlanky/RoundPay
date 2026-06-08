@@ -7,7 +7,6 @@ import { CyclePaymentsPanel } from '@/components/CyclePaymentsPanel';
 import { DeleteDraftGroupCard } from '@/components/DeleteDraftGroupCard';
 import { DraftGroupPanel } from '@/components/DraftGroupPanel';
 import { EditDraftGroupSheet, type DraftGroupFormValues } from '@/components/EditDraftGroupSheet';
-import { GroupFrequencyPicker } from '@/components/GroupFrequencyPicker';
 import { InviteCodeCard } from '@/components/InviteCodeCard';
 import { Screen } from '@/components/Screen';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -24,10 +23,8 @@ import { isPaystackConfigured } from '@/lib/paystack';
 import { resolveRouteParam } from '@/lib/route-params';
 import { useContributions } from '@/hooks/useContributions';
 import { useGroup } from '@/hooks/useGroup';
-import { useSupportedGroupFrequencies } from '@/hooks/useSupportedGroupFrequencies';
 import { recordContributionPayment } from '@/lib/contributions';
 import { membersStillNeeded, rosterIsComplete, validateCreateGroupInput } from '@/lib/group-validation';
-import type { GroupFrequency } from '@/lib/types';
 import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 export default function GroupDetailScreen() {
@@ -45,11 +42,9 @@ export default function GroupDetailScreen() {
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [editValues, setEditValues] = useState<DraftGroupFormValues | null>(null);
-  const [frequencySaving, setFrequencySaving] = useState(false);
   const router = useRouter();
   const { t } = useTranslation();
   const { colors, scheme } = useThemeTokens();
-  const { supported, loading: freqLoading } = useSupportedGroupFrequencies();
 
   const memberByUserId = useMemo(() => {
     const map = new Map<string, MemberWithProfile>();
@@ -281,19 +276,6 @@ export default function GroupDetailScreen() {
     setEditOpen(true);
   };
 
-  const handleFrequencyChange = async (next: GroupFrequency) => {
-    if (!id || !group || next === group.frequency || frequencySaving) return;
-
-    setFrequencySaving(true);
-    try {
-      await updateDraftGroupSettings(id, { frequency: next }, { currentMemberCount: members.length });
-      await refetch();
-    } catch (e) {
-      Alert.alert('Could not update schedule', messageFromGroupError(e));
-    }
-    setFrequencySaving(false);
-  };
-
   const handleAdminParticipation = async (participates: boolean) => {
     if (!id || !user) return;
     setActionLoading(true);
@@ -365,28 +347,10 @@ export default function GroupDetailScreen() {
             style={styles.adminHubBtn}
           />
         ) : null}
-        {isDraft && isAdmin ? (
-          <View style={styles.frequencyBlock}>
-            <Text style={[styles.freqLabel, { color: colors.textPrimary }]}>How often?</Text>
-            <GroupFrequencyPicker
-              value={group.frequency}
-              onChange={handleFrequencyChange}
-              supported={supported}
-              disabled={frequencySaving || freqLoading}
-            />
-            {frequencySaving ? (
-              <Text style={[styles.freqSaving, { color: colors.textSecondary }]}>Saving…</Text>
-            ) : null}
-            <Text style={[styles.meta, { color: colors.textSecondary }]}>
-              Up to {projectedPot} pot · {group.max_members} members
-            </Text>
-          </View>
-        ) : (
-          <Text style={[styles.meta, { color: colors.textSecondary }]}>
-            {frequencyLabel(group.frequency)}
-            {isDraft ? ` · up to ${projectedPot} pot` : ` · Pot ${potSize}`}
-          </Text>
-        )}
+        <Text style={[styles.meta, { color: colors.textSecondary }]}>
+          {frequencyLabel(group.frequency)}
+          {isDraft ? ` · up to ${projectedPot} pot` : ` · Pot ${potSize}`}
+        </Text>
         {isDraft ? (
           <InviteCodeCard groupName={group.name} inviteCode={group.invite_code} />
         ) : null}
@@ -537,7 +501,6 @@ export default function GroupDetailScreen() {
           saving={editSaving}
           error={editError}
           values={editValues}
-          supported={supported}
           onChange={(patch) => setEditValues((prev) => (prev ? { ...prev, ...patch } : prev))}
           onSave={handleSaveDraftSettings}
           onClose={() => setEditOpen(false)}
@@ -557,9 +520,6 @@ const styles = StyleSheet.create({
   amount: { fontSize: 28, fontWeight: '800', marginTop: spacing.sm },
   adminHubBtn: { marginTop: spacing.sm, marginBottom: 0 },
   meta: { fontSize: 14, marginTop: 4 },
-  frequencyBlock: { marginTop: spacing.sm },
-  freqLabel: { fontSize: 14, fontWeight: '500', marginBottom: spacing.xs },
-  freqSaving: { fontSize: 12, marginTop: -spacing.xs },
   section: { fontSize: 17, fontWeight: '600', marginBottom: spacing.sm, marginTop: spacing.sm },
   memberRow: {
     flexDirection: 'row',

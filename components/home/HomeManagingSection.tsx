@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { AdminActivityFeed } from '@/components/admin/AdminActivityFeed';
 import { AdminKpiGrid } from '@/components/admin/AdminKpiGrid';
 import { GroupHealthBadge } from '@/components/admin/GroupHealthBadge';
 import { HomeSectionTitle } from '@/components/home/HomeSectionTitle';
@@ -49,17 +50,19 @@ export function HomeManagingSection({ userId }: Props) {
               label: t('admin.kpiReceived'),
               value: formatNaira(stats.contributionsReceived),
               accent: 'success',
+              onPress: () => router.push('/(tabs)/ledger?status=paid' as Href),
             },
             {
               label: t('admin.kpiOutstanding'),
               value: formatNaira(stats.contributionsOutstanding),
               accent: stats.contributionsOutstanding > 0 ? 'warning' : 'default',
-              onPress: () => router.push('/(tabs)/ledger' as Href),
+              onPress: () => router.push('/(tabs)/ledger?status=pending' as Href),
             },
             {
               label: t('admin.kpiPending'),
               value: String(stats.pendingConfirmations),
               accent: stats.pendingConfirmations > 0 ? 'warning' : 'default',
+              onPress: () => router.push('/(tabs)/ledger?status=pending' as Href),
             },
             {
               label: t('admin.kpiPayouts'),
@@ -115,6 +118,13 @@ export function HomeManagingSection({ userId }: Props) {
           style={styles.actionBtn}
         />
       </View>
+
+      {data?.recentActivity?.length ? (
+        <AdminActivityFeed
+          activities={data.recentActivity}
+          title={t('admin.recentActivity')}
+        />
+      ) : null}
     </View>
   );
 }

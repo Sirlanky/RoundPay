@@ -12,11 +12,18 @@ export interface PayoutQueueItem {
   dueDate: string | null;
   cycleStatus: string;
   allPaid: boolean;
+  paidCount: number;
+  memberCount: number;
 }
 
-export async function fetchPayoutQueue(userId: string): Promise<PayoutQueueItem[]> {
+export async function fetchPayoutQueue(
+  userId: string,
+  filters?: { groupId?: string }
+): Promise<PayoutQueueItem[]> {
   const groups = await getAdminGroups(userId);
-  const active = groups.filter((g) => g.status === 'active');
+  const active = groups.filter(
+    (g) => g.status === 'active' && (!filters?.groupId || g.id === filters.groupId)
+  );
   if (!active.length) return [];
 
   const groupById = new Map(active.map((g) => [g.id, g]));
@@ -40,7 +47,8 @@ export async function fetchPayoutQueue(userId: string): Promise<PayoutQueueItem[
       .select('status')
       .eq('cycle_id', cycle.id);
 
-    const allPaid = (contribs ?? []).every((c) => c.status === 'paid');
+    const paidCount = (contribs ?? []).filter((c) => c.status === 'paid').length;
+    const allPaid = (contribs ?? []).length > 0 && paidCount === contribs!.length;
     const memberCount = contribs?.length ?? group.max_members;
 
     const recipient = cycle.recipient as { full_name?: string | null } | null;
@@ -66,6 +74,8 @@ export async function fetchPayoutQueue(userId: string): Promise<PayoutQueueItem[
       dueDate: cycle.due_date,
       cycleStatus: cycle.status,
       allPaid,
+      paidCount,
+      memberCount,
     });
   }
 

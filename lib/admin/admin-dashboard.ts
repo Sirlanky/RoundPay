@@ -137,7 +137,7 @@ async function fetchRecentAdminActivity(groups: AjoGroup[]): Promise<HomeActivit
   const [contribRes, payoutRes] = await Promise.all([
     supabase
       .from('contributions')
-      .select('id, paid_at, user_id, profiles(full_name)')
+      .select('id, paid_at, user_id, profiles:profiles!contributions_user_id_fkey(full_name)')
       .in('cycle_id', cycleIds)
       .eq('status', 'paid')
       .not('paid_at', 'is', null)
