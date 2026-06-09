@@ -1,5 +1,5 @@
-import { SymbolView } from 'expo-symbols';
 import { StyleSheet, View } from 'react-native';
+import { PlatformIcon } from '@/components/navigation/PlatformIcon';
 import { Text } from '@/components/ui/Text';
 import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
@@ -24,11 +24,7 @@ export function EmptyState({ title, message }: Props) {
         shadow('small'),
       ]}>
       <View style={[styles.iconCircle, { backgroundColor: primaryAlpha(scheme, 12) }]}>
-        <SymbolView
-          name={{ ios: 'tray', android: 'inbox', web: 'inbox' } as never}
-          tintColor={colors.primary}
-          size={22}
-        />
+        <PlatformIcon name={{ ios: 'tray', android: 'inbox', web: 'inbox' }} color={colors.primary} size={22} />
       </View>
       <Text variant="headingSmall" style={styles.title}>
         {title}

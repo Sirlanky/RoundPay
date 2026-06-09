@@ -1,3 +1,4 @@
+import { estimatedNetPayout } from './cycle-utils';
 import { getUserGroups } from './groups';
 import { memberDisplayName, type MemberWithProfile } from './members';
 import { supabase } from './supabase';
@@ -179,7 +180,15 @@ export async function fetchHomeDashboard(
   const isOverdue = Boolean(duePassed && hasPending);
 
   const totalPot =
-    memberCount > 0 ? primaryGroup.contribution_amount * memberCount : null;
+    memberCount > 0 && currentCycle?.recipient_id
+      ? estimatedNetPayout({
+          contributionAmount: primaryGroup.contribution_amount,
+          contributorCount: memberCount,
+          adminFeePercent: primaryGroup.admin_fee_percent ?? 0,
+          recipientId: currentCycle.recipient_id,
+          adminId: primaryGroup.admin_id,
+        })
+      : null;
 
   let recentActivity: HomeActivity[] = [];
   if (primaryGroup.status === 'active') {

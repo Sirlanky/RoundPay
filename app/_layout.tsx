@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppLockGate } from '@/components/AppLockGate';
 import { PushNotificationHandler } from '@/components/PushNotificationHandler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { MessagesProvider } from '@/contexts/MessagesContext';
 import { AdminModeProvider } from '@/contexts/AdminModeContext';
 import { PlanProvider } from '@/contexts/PlanContext';
 import { TransactionPinProvider } from '@/contexts/TransactionPinContext';
@@ -20,6 +21,7 @@ import { brand } from '@/theme/colors';
 import { useThemeTokens } from '@/theme';
 import { createSessionFromUrl } from '@/lib/auth';
 import { SIMPLE_GUEST_AUTH } from '@/lib/auth-mode';
+import { urlHasAuthParams } from '@/lib/redirect';
 import { supabase } from '@/lib/supabase';
 
 export { ErrorBoundary } from 'expo-router';
@@ -30,6 +32,11 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
+function MessagesGate({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return <MessagesProvider userId={user?.id}>{children}</MessagesProvider>;
+}
+
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, loading, configured, buildMode } = useAuth();
   const segments = useSegments();
@@ -38,11 +45,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleUrl = async (url: string) => {
-      if (!url.includes('auth/callback') && !url.includes('access_token') && !url.includes('code=') && !url.includes('token_hash')) {
+      if (!urlHasAuthParams(url) && !url.includes('auth/callback')) {
         return;
       }
       const result = await createSessionFromUrl(url);
       if (result.ok) {
+        // Ensure session is persisted before routing (avoids bounce back to login).
+        await supabase.auth.getSession();
         router.replace('/(tabs)');
         return;
       }
@@ -156,6 +165,7 @@ export default function RootLayout() {
               <PlanProvider>
             <TransactionPinProvider>
               <AuthGate>
+                <MessagesGate>
                 <AppLockGate>
                   <PushNotificationHandler />
                   <RootStatusBar />
@@ -164,11 +174,14 @@ export default function RootLayout() {
                     <Stack.Screen name="(auth)" />
                     <Stack.Screen name="group" />
                     <Stack.Screen name="profile" />
+                    <Stack.Screen name="member" />
+                    <Stack.Screen name="messages" />
                     <Stack.Screen name="auth" />
                     <Stack.Screen name="join/[code]" />
                     <Stack.Screen name="index" />
                   </Stack>
                 </AppLockGate>
+                </MessagesGate>
               </AuthGate>
             </TransactionPinProvider>
               </PlanProvider>

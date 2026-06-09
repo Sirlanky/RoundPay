@@ -3,7 +3,7 @@ import type { TranslationKey } from '@/lib/i18n/keys';
 export type MemberTabRouteName =
   | 'index'
   | 'groups'
-  | 'contributions'
+  | 'messages'
   | 'notifications'
   | 'profile';
 
@@ -30,10 +30,14 @@ export const MEMBER_TAB_CONFIG: Record<MemberTabRouteName, TabConfig> = {
     icon: { ios: 'person.3', android: 'group', web: 'group' },
     iconFocused: { ios: 'person.3.fill', android: 'group', web: 'group' },
   },
-  contributions: {
-    labelKey: 'nav.contributions',
-    icon: { ios: 'banknote', android: 'payments', web: 'payments' },
-    iconFocused: { ios: 'banknote.fill', android: 'payments', web: 'payments' },
+  messages: {
+    labelKey: 'nav.messages',
+    icon: { ios: 'bubble.left.and.bubble.right', android: 'forum', web: 'forum' },
+    iconFocused: {
+      ios: 'bubble.left.and.bubble.right.fill',
+      android: 'forum',
+      web: 'forum',
+    },
   },
   notifications: {
     labelKey: 'nav.alerts',
@@ -42,8 +46,8 @@ export const MEMBER_TAB_CONFIG: Record<MemberTabRouteName, TabConfig> = {
   },
   profile: {
     labelKey: 'nav.profile',
-    icon: { ios: 'person.circle', android: 'person', web: 'person' },
-    iconFocused: { ios: 'person.circle.fill', android: 'person', web: 'person' },
+    icon: { ios: 'person.crop.circle', android: 'person', web: 'person' },
+    iconFocused: { ios: 'person.crop.circle.fill', android: 'person', web: 'person' },
   },
 };
 
@@ -87,4 +91,9 @@ export const ACTIVE_TAB_CONFIG: Record<string, TabConfig> = MEMBER_TAB_CONFIG;
 
 export function isTabInConfig(name: string): boolean {
   return name in ACTIVE_TAB_CONFIG;
+}
+
+/** @deprecated Use ACTIVE_TAB_CONFIG directly. Kept for hot-reload bundles. */
+export function getActiveTabConfig(): Record<string, TabConfig> {
+  return ACTIVE_TAB_CONFIG;
 }

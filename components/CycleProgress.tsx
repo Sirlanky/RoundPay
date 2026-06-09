@@ -1,22 +1,36 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/ui';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { formatDate } from '@/lib/format';
+import { cyclePositionLabel, isLastCycle } from '@/lib/cycle-utils';
 import type { Cycle } from '@/lib/types';
-import { spacing, useThemeTokens } from '@/theme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 interface Props {
   paidCount: number;
   totalCount: number;
   cycle: Cycle | null;
+  memberCount?: number;
 }
 
-export function CycleProgress({ paidCount, totalCount, cycle }: Props) {
-  const { colors } = useThemeTokens();
+export function CycleProgress({ paidCount, totalCount, cycle, memberCount = totalCount }: Props) {
+  const { tp } = useTranslation();
+  const { colors, scheme } = useThemeTokens();
   const progress = totalCount > 0 ? paidCount / totalCount : 0;
+  const finalRotation = cycle ? isLastCycle(cycle.cycle_number, memberCount) : false;
 
   return (
     <Card>
-      <Text style={[styles.title, { color: colors.textPrimary }]}>Current cycle</Text>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>
+          {cycle ? cyclePositionLabel(cycle.cycle_number, memberCount) : 'Current cycle'}
+        </Text>
+        {finalRotation ? (
+          <View style={[styles.finalBadge, { backgroundColor: primaryAlpha(scheme, 12) }]}>
+            <Text style={[styles.finalBadgeText, { color: colors.primary }]}>Final rotation</Text>
+          </View>
+        ) : null}
+      </View>
       {cycle ? (
         <>
           <Text style={[styles.recipient, { color: colors.textSecondary }]}>
@@ -27,7 +41,10 @@ export function CycleProgress({ paidCount, totalCount, cycle }: Props) {
             <View style={[styles.barFill, { width: `${Math.min(progress * 100, 100)}%`, backgroundColor: colors.primary }]} />
           </View>
           <Text style={[styles.progressText, { color: colors.textPrimary }]}>
-            {paidCount} of {totalCount} contributions paid
+            {tp(totalCount, 'plural.contributionPaid_one', 'plural.contributionPaid_other', {
+              paid: paidCount,
+              total: totalCount,
+            })}
           </Text>
         </>
       ) : (
@@ -38,7 +55,16 @@ export function CycleProgress({ paidCount, totalCount, cycle }: Props) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 16, fontWeight: '600', marginBottom: spacing.sm },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  title: { fontSize: 16, fontWeight: '600', flex: 1 },
+  finalBadge: { paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: 999 },
+  finalBadgeText: { fontSize: 11, fontWeight: '700' },
   recipient: { fontSize: 14 },
   due: { fontSize: 13, marginTop: 2, marginBottom: spacing.md },
   barBg: { height: 8, borderRadius: 4, overflow: 'hidden' },

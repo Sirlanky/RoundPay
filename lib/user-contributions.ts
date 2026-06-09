@@ -66,6 +66,18 @@ function mapRow(row: ContributionQueryRow): UserContributionRow | null {
 
 /** All contribution rows for the signed-in user across every group. */
 export async function getUserContributions(userId: string): Promise<UserContributionRow[]> {
+  const {
+    data: { user },
+    error: authErr,
+  } = await supabase.auth.getUser();
+  if (authErr || !user) {
+    throw new Error('Sign in to view your contributions.');
+  }
+  // Never trust a caller-supplied id if the session has changed (e.g. after sign-out/sign-in).
+  if (user.id !== userId) {
+    throw new Error('Your session changed. Pull down to refresh.');
+  }
+
   const { data, error } = await supabase
     .from('contributions')
     .select(
@@ -96,12 +108,21 @@ export async function getUserContributions(userId: string): Promise<UserContribu
 }
 
 export function summarizeContributions(rows: UserContributionRow[]) {
-  const paid = rows.filter((r) => r.status === 'paid').length;
-  const pending = rows.filter((r) => r.status === 'pending').length;
+  const paidRows = rows.filter((r) => r.status === 'paid');
+  const pendingRows = rows.filter((r) => r.status === 'pending');
   const failed = rows.filter((r) => r.status === 'failed').length;
-  const totalPaidAmount = rows
-    .filter((r) => r.status === 'paid')
-    .reduce((sum, r) => sum + r.amount, 0);
+  const totalPaidAmount = paidRows.reduce((sum, r) => sum + r.amount, 0);
+  const groupCount = new Set(rows.map((r) => r.groupId)).size;
 
-  return { paid, pending, failed, total: rows.length, totalPaidAmount };
+  return {
+    /** Number of contribution payments you have completed (one per cycle per group). */
+    paid: paidRows.length,
+    /** Number of contribution payments still owed. */
+    pending: pendingRows.length,
+    failed,
+    total: rows.length,
+    /** Sum of every completed payment you have made, across all groups. */
+    totalPaidAmount,
+    groupCount,
+  };
 }

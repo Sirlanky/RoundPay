@@ -1,5 +1,5 @@
-import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { PlatformIcon } from '@/components/navigation/PlatformIcon';
 import { Card } from '@/components/ui';
 import { radius, spacing, useThemeTokens } from '@/theme';
 
@@ -22,9 +22,9 @@ export function DeleteDraftGroupCard({ groupName, onPress, loading }: Props) {
           {loading ? (
             <ActivityIndicator color={colors.error} size="small" />
           ) : (
-            <SymbolView
-              name={{ ios: 'trash', android: 'delete', web: 'delete' } as never}
-              tintColor={colors.error}
+            <PlatformIcon
+              name={{ ios: 'trash', android: 'delete', web: 'delete' }}
+              color={colors.error}
               size={18}
             />
           )}
@@ -35,9 +35,9 @@ export function DeleteDraftGroupCard({ groupName, onPress, loading }: Props) {
             Remove "{groupName}" for all members. This cannot be undone.
           </Text>
         </View>
-        <SymbolView
-          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' } as never}
-          tintColor={colors.textSecondary}
+        <PlatformIcon
+          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+          color={colors.textSecondary}
           size={14}
         />
       </Pressable>

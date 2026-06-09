@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui';
 import { GroupFrequencyPicker } from '@/components/GroupFrequencyPicker';
 import { Input } from '@/components/Input';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { frequencyLabel } from '@/lib/group-frequency';
 import { poolSummary, validateCreateGroupInput } from '@/lib/group-validation';
 import type { AjoGroup, GroupFrequency } from '@/lib/types';
@@ -27,6 +28,7 @@ interface Props {
   visible: boolean;
   group: AjoGroup;
   memberCount: number;
+  adminParticipates: boolean;
   saving: boolean;
   error?: string;
   values: DraftGroupFormValues;
@@ -40,6 +42,7 @@ export function EditDraftGroupSheet({
   visible,
   group,
   memberCount,
+  adminParticipates,
   saving,
   error,
   values,
@@ -48,6 +51,7 @@ export function EditDraftGroupSheet({
   onSave,
   onClose,
 }: Props) {
+  const { tp } = useTranslation();
   const { colors } = useThemeTokens();
 
   const validation = validateCreateGroupInput({
@@ -66,7 +70,15 @@ export function EditDraftGroupSheet({
           validation.data.contributionAmount,
           validation.data.maxMembers,
           values.frequency,
-          group.admin_fee_percent
+          group.admin_fee_percent,
+          {
+            adminParticipates,
+            memberWord: tp(
+              validation.data.maxMembers,
+              'plural.memberNoun_one',
+              'plural.memberNoun_other'
+            ),
+          }
         )
       : null;
 

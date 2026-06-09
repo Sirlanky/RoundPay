@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
+import { PlatformIcon } from '@/components/navigation/PlatformIcon';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { spacing, useThemeTokens, type ThemeColors } from '@/theme';
 
@@ -63,7 +63,7 @@ function StatChip({
       <Text style={[styles.value, { color: accent }]}>{value}</Text>
       <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       {tappable ? (
-        <SymbolView name={{ ios: 'chevron.up', android: 'expand_less', web: 'expand_less' } as never} tintColor={colors.textSecondary} size={12} />
+        <PlatformIcon name={{ ios: 'chevron.up', android: 'expand_less', web: 'expand_less' }} color={colors.textSecondary} size={12} />
       ) : null}
     </>
   );

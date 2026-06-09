@@ -1,8 +1,7 @@
-import { SymbolView } from 'expo-symbols';
 import { ReactNode, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { PlatformIcon } from '@/components/navigation/PlatformIcon';
-import { Card, Text } from '@/components/ui';
+import { Button, Card, Text } from '@/components/ui';
 import { HomeFeatureSheet, type HomeFeatureId } from '@/components/home/HomeFeatureSheet';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
@@ -158,7 +157,7 @@ function HomeEmptyLanding({ title, subtitle, onCreate, onJoin, extraActions }: L
             </View>
             <View style={[styles.stepContent, index < steps.length - 1 && styles.stepContentBorder, { borderBottomColor: colors.border }]}>
               <View style={[styles.stepIcon, { backgroundColor: primaryAlpha(scheme, 12) }]}>
-                <SymbolView name={step.icon as never} tintColor={colors.primary} size={18} />
+                <PlatformIcon name={step.icon} color={colors.primary} size={18} />
               </View>
               <Text variant="bodyMedium" style={styles.stepText}>
                 {step.text}
@@ -171,9 +170,9 @@ function HomeEmptyLanding({ title, subtitle, onCreate, onJoin, extraActions }: L
       <HomeSectionTitle title={t('home.invitations')} />
       <Card variant="standard" style={styles.inviteCard}>
         <View style={[styles.inviteIconWrap, { backgroundColor: colors.surfaceSecondary }]}>
-          <SymbolView
-            name={{ ios: 'envelope.open', android: 'mail', web: 'mail' } as never}
-            tintColor={colors.textMuted}
+          <PlatformIcon
+            name={{ ios: 'envelope.open', android: 'mail', web: 'mail' }}
+            color={colors.textMuted}
             size={22}
           />
         </View>
@@ -216,17 +215,35 @@ interface NoActiveProps {
 
 export function HomeNoActiveEmpty({ onCreate, onJoin, onViewGroups }: NoActiveProps) {
   const { t } = useTranslation();
+  const { colors, scheme } = useThemeTokens();
 
   return (
-    <HomeEmptyLanding
-      title={t('home.noActiveCircle')}
-      subtitle={t('home.noActiveCircleSubtitle')}
-      onCreate={onCreate}
-      onJoin={onJoin}
-      extraActions={
-        <HeroCta label={t('home.viewGroups')} onPress={onViewGroups} variant="outline" />
-      }
-    />
+    <Card variant="standard" style={styles.inactiveCard}>
+      <View style={styles.inactiveRow}>
+        <View style={[styles.inactiveIcon, { backgroundColor: primaryAlpha(scheme, 12) }]}>
+          <PlatformIcon
+            name={{ ios: 'circle.dashed', android: 'donut_large', web: 'donut_large' }}
+            size={20}
+            color={colors.primary}
+          />
+        </View>
+        <View style={styles.inactiveCopy}>
+          <Text variant="bodyLarge" style={styles.inactiveTitle}>
+            {t('home.noActiveCircle')}
+          </Text>
+          <Text variant="bodySmall" color="secondary" style={styles.inactiveSubtitle}>
+            {t('home.noActiveCircleSubtitle')}
+          </Text>
+        </View>
+      </View>
+
+      <Button title={t('home.viewGroups')} onPress={onViewGroups} style={styles.inactivePrimary} />
+
+      <View style={styles.inactiveSecondary}>
+        <Button title={t('home.createGroup')} variant="secondary" onPress={onCreate} style={styles.inactiveHalf} />
+        <Button title={t('home.joinGroup')} variant="secondary" onPress={onJoin} style={styles.inactiveHalf} />
+      </View>
+    </Card>
   );
 }
 
@@ -362,4 +379,30 @@ const styles = StyleSheet.create({
   },
   inviteBody: { flex: 1, gap: 4 },
   inviteHint: { lineHeight: 16 },
+  inactiveCard: {
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  inactiveRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  inactiveIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inactiveCopy: { flex: 1, gap: 4 },
+  inactiveTitle: { fontWeight: '600' },
+  inactiveSubtitle: { lineHeight: 20 },
+  inactivePrimary: { marginBottom: spacing.sm, marginVertical: 0 },
+  inactiveSecondary: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  inactiveHalf: { flex: 1, marginVertical: 0 },
 });

@@ -2,10 +2,12 @@ import { supabase } from './supabase';
 import type { AppNotification } from './types';
 
 export async function fetchNotifications(userId: string, limit = 50): Promise<AppNotification[]> {
+  // Direct messages have their own Messages area; keep them out of the Alerts feed.
   const { data, error } = await supabase
     .from('notifications')
     .select('*')
     .eq('user_id', userId)
+    .neq('type', 'direct_message')
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -18,6 +20,7 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
     .from('notifications')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
+    .neq('type', 'direct_message')
     .is('read_at', null);
 
   if (error) throw error;
@@ -76,6 +79,10 @@ export function getNotificationPathFromPushData(
 /** Route to open when the user taps a notification row. */
 export function getNotificationPath(notification: AppNotification): string | null {
   const { type, group_id, related_entity_id } = notification;
+
+  if (type === 'direct_message' && related_entity_id) {
+    return `/messages/${related_entity_id}`;
+  }
 
   if (
     group_id &&

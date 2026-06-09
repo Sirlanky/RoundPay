@@ -31,6 +31,13 @@ export default function GroupLayout() {
           headerLeft: () => <HeaderBackButton label="Back" />,
         }}
       />
+      <Stack.Screen
+        name="[id]/admin"
+        options={{
+          title: 'Group Admin',
+          headerLeft: () => <HeaderBackButton label="Back" />,
+        }}
+      />
       <Stack.Screen name="[id]/pay" options={formScreenOptions(scheme, 'Pay Contribution')} />
     </Stack>
   );

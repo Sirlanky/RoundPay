@@ -1,7 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
-import { InitialsAvatar } from '@/components/admin/InitialsAvatar';
+import { Avatar } from '@/components/Avatar';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { Card, Input, StatusBadge, Text } from '@/components/ui';
@@ -92,10 +92,9 @@ export default function AdminLedgerScreen() {
     );
   }
 
-  const scopedName = groupId ? allRows[0]?.groupName : undefined;
-
   return (
     <Screen
+      safeArea={false}
       tabBarInset
       refreshing={refreshing}
       onRefresh={async () => {
@@ -104,10 +103,6 @@ export default function AdminLedgerScreen() {
         setRefreshing(false);
       }}
       contentStyle={styles.content}>
-      <Text variant="bodyMedium" color="secondary" style={styles.intro}>
-        {scopedName ?? t('admin.ledgerIntro')}
-      </Text>
-
       <Card variant="elevated" style={styles.summary}>
         <View style={styles.summaryCell}>
           <Text variant="caption" color="secondary">
@@ -166,7 +161,7 @@ export default function AdminLedgerScreen() {
             onPress={() => router.push(`/group/${row.groupId}`)}
             style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}>
             <Card variant="standard" style={styles.row}>
-              <InitialsAvatar name={row.memberName} />
+              <Avatar name={row.memberName} uri={row.memberAvatarUrl} />
               <View style={styles.rowBody}>
                 <Text variant="bodyMedium" style={styles.member} numberOfLines={1}>
                   {row.memberName}
@@ -199,7 +194,6 @@ export default function AdminLedgerScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xl },
-  intro: { marginBottom: spacing.md, lineHeight: 22 },
   summary: {
     flexDirection: 'row',
     alignItems: 'center',

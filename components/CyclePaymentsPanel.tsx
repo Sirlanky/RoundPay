@@ -1,9 +1,12 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Avatar } from '@/components/Avatar';
 import { Button, Card } from '@/components/ui';
 import { StatusBadge } from './StatusBadge';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { formatNaira } from '@/lib/format';
 import { memberDisplayName, type MemberWithProfile } from '@/lib/members';
 import { isPaystackConfigured } from '@/lib/paystack';
+import { paystackCollectContributions } from '@/lib/paystack-mode';
 import type { Contribution, Cycle } from '@/lib/types';
 import { spacing, useThemeTokens } from '@/theme';
 
@@ -30,11 +33,11 @@ export function CyclePaymentsPanel({
   onRecordPayment,
   recordingId,
 }: Props) {
+  const { t } = useTranslation();
   const { colors } = useThemeTokens();
   const totalCount = contributions.length;
-  const pendingCount = totalCount - paidCount;
-  const allPaid = totalCount > 0 && pendingCount === 0;
   const paystackReady = isPaystackConfigured();
+  const cardPayEnabled = paystackCollectContributions && paystackReady;
 
   if (!cycle) {
     return null;
@@ -58,19 +61,8 @@ export function CyclePaymentsPanel({
     <Card style={styles.wrap}>
       <Text style={[styles.title, { color: colors.textPrimary }]}>Payments this cycle</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        {paidCount} paid · {pendingCount} waiting
-        {allPaid ? ' · Ready for payout' : ''}
+        {paidCount}/{totalCount} paid
       </Text>
-
-      {isAdmin ? (
-        <Text style={[styles.adminHint, { color: colors.textSecondary, marginBottom: spacing.sm }]}>
-          Only you can record payments — members cannot mark themselves paid.
-        </Text>
-      ) : (
-        <Text style={[styles.adminHint, { color: colors.textSecondary, marginBottom: spacing.sm }]}>
-          The admin records each payment after they receive it.
-        </Text>
-      )}
 
       {contributions.map((c) => {
         const member = memberByUserId.get(c.user_id);
@@ -79,32 +71,47 @@ export function CyclePaymentsPanel({
         const isPending = c.status === 'pending';
         const isRecording = recordingId === c.id;
 
+        const name = member ? memberDisplayName(member) : 'Member';
+
         return (
           <View
             key={c.id}
             style={[styles.row, { backgroundColor: colors.background, borderColor: colors.border }]}>
-            <View style={[styles.dot, { backgroundColor: isPaid ? colors.success : colors.error }]} />
-            <View style={styles.main}>
-              <Text style={[styles.name, { color: colors.textPrimary }]}>
-                {member ? memberDisplayName(member) : 'Member'}
-                {isYou ? ' (you)' : ''}
-              </Text>
-              <Text style={[styles.amount, { color: colors.textSecondary }]}>
-                {formatNaira(c.amount)}
-                {isPaid ? ' · Paid' : ' · Awaiting payment'}
-              </Text>
+            <View style={styles.rowTop}>
+              <View style={styles.avatarWrap}>
+                <Avatar name={name} uri={member?.profile?.avatar_url} size={40} />
+                <View
+                  style={[
+                    styles.dot,
+                    {
+                      backgroundColor: isPaid ? colors.success : colors.error,
+                      borderColor: colors.background,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.main}>
+                <Text style={[styles.name, { color: colors.textPrimary }]}>
+                  {name}
+                  {isYou ? ' (you)' : ''}
+                </Text>
+                <Text style={[styles.amount, { color: colors.textSecondary }]}>
+                  {formatNaira(c.amount)}
+                  {isPaid ? ' · Paid' : ' · Awaiting payment'}
+                </Text>
+              </View>
+              <StatusBadge status={isPaid ? 'paid' : 'pending'} />
             </View>
-            <StatusBadge status={isPaid ? 'paid' : 'pending'} />
 
-            {isPending && !isAdmin && isYou && paystackReady ? (
+            {isPending && !isAdmin && isYou && cardPayEnabled ? (
               <View style={styles.actions}>
-                <Button title="Pay now (Paystack)" onPress={() => onPay(c.id)} style={styles.actionBtn} />
+                <Button title="Pay now" onPress={() => onPay(c.id)} style={styles.actionBtn} />
               </View>
             ) : null}
 
-            {isPending && !isAdmin && (!isYou || !paystackReady) ? (
+            {isPending && !isAdmin && isYou && !cardPayEnabled ? (
               <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                {isYou ? 'Pay the admin — they will record your payment here.' : 'Waiting for admin to record payment.'}
+                {t('payments.transferToAdmin')}
               </Text>
             ) : null}
 
@@ -121,12 +128,6 @@ export function CyclePaymentsPanel({
           </View>
         );
       })}
-
-      {isAdmin && allPaid && cycle.status === 'completed' ? (
-        <Text style={[styles.adminHint, { color: colors.primary }]}>
-          Everyone has paid. Tap Record payout sent below.
-        </Text>
-      ) : null}
     </Card>
   );
 }
@@ -142,8 +143,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     gap: spacing.sm,
   },
-  dot: { width: 8, height: 8, borderRadius: 4, position: 'absolute', left: spacing.md, top: spacing.md + 6 },
-  main: { marginLeft: spacing.md },
+  rowTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  avatarWrap: { position: 'relative' },
+  dot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    position: 'absolute',
+    right: -1,
+    bottom: -1,
+  },
+  main: { flex: 1 },
   name: { fontSize: 16, fontWeight: '600' },
   amount: { fontSize: 13, marginTop: 2 },
   actions: { marginTop: spacing.xs },

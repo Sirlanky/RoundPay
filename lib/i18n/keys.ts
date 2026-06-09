@@ -1,6 +1,7 @@
 export type TranslationKey =
   | 'nav.home'
   | 'nav.groups'
+  | 'nav.messages'
   | 'nav.contributions'
   | 'nav.alerts'
   | 'nav.profile'
@@ -18,6 +19,63 @@ export type TranslationKey =
   | 'common.gotIt'
   | 'common.goToProfile'
   | 'common.loading'
+  | 'plural.group_one'
+  | 'plural.group_other'
+  | 'plural.member_one'
+  | 'plural.member_other'
+  | 'plural.memberNoun_one'
+  | 'plural.memberNoun_other'
+  | 'plural.cycle_one'
+  | 'plural.cycle_other'
+  | 'plural.spotLeft_one'
+  | 'plural.spotLeft_other'
+  | 'plural.moreMember_one'
+  | 'plural.moreMember_other'
+  | 'plural.activeCount_one'
+  | 'plural.activeCount_other'
+  | 'plural.finished_one'
+  | 'plural.finished_other'
+  | 'plural.roster_one'
+  | 'plural.roster_other'
+  | 'plural.contributionPaid_one'
+  | 'plural.contributionPaid_other'
+  | 'plural.cyclePosition_one'
+  | 'plural.cyclePosition_other'
+  | 'plural.groupMeta_one'
+  | 'plural.groupMeta_other'
+  | 'plural.poolMembers_one'
+  | 'plural.poolMembers_other'
+  | 'plural.sharedGroups_one'
+  | 'plural.sharedGroups_other'
+  | 'plural.noSharedGroups'
+  | 'group.draftTitle'
+  | 'group.draftStartWhenFull_one'
+  | 'group.draftStartWhenFull_other'
+  | 'group.draftOrganizerWhenFull_one'
+  | 'group.draftOrganizerWhenFull_other'
+  | 'group.draftWaitingAdmin_one'
+  | 'group.draftWaitingAdmin_other'
+  | 'group.draftRosterFull'
+  | 'group.draftWaitingTitle_one'
+  | 'group.draftWaitingTitle_other'
+  | 'group.draftNeedMore_one'
+  | 'group.draftNeedMore_other'
+  | 'group.draftJoinedLine_one'
+  | 'group.draftJoinedLine_other'
+  | 'group.draftReadyAdmin'
+  | 'group.draftReadyMember_one'
+  | 'group.draftReadyMember_other'
+  | 'group.draftUnlockHint_one'
+  | 'group.draftUnlockHint_other'
+  | 'group.membersSection'
+  | 'group.previewMembers_one'
+  | 'group.previewMembers_other'
+  | 'group.previewFull'
+  | 'group.rosterIncomplete'
+  | 'group.onlyAdminStarts_one'
+  | 'group.onlyAdminStarts_other'
+  | 'group.cycleFinished_one'
+  | 'group.cycleFinished_other'
   | 'home.welcomeBack'
   | 'home.welcomeBackName'
   | 'home.startFirstCircle'
@@ -61,6 +119,10 @@ export type TranslationKey =
   | 'profile.changeContact'
   | 'profile.changeContactSubtitle'
   | 'profile.myGroups'
+  | 'profile.myGroupsSubtitle'
+  | 'profile.viewProfile'
+  | 'profile.hubTitle'
+  | 'profile.messagesHubSubtitle'
   | 'profile.contributionHistory'
   | 'profile.payoutHistory'
   | 'profile.inviteCodes'
@@ -118,6 +180,10 @@ export type TranslationKey =
   | 'profileSetup.bannerTitle'
   | 'profileSetup.bannerBody'
   | 'profileSetup.completeSetup'
+  | 'profileSetup.reminderTitle'
+  | 'profileSetup.reminderBody'
+  | 'profileSetup.dismissReminder'
+  | 'profileSetup.swipeToDismiss'
   | 'groups.notInApp'
   | 'groups.notInAppBody'
   | 'groups.noGroups'
@@ -134,10 +200,50 @@ export type TranslationKey =
   | 'contributions.pending'
   | 'contributions.totalPaid'
   | 'contributions.tapToPay'
+  | 'contributions.searchPlaceholder'
+  | 'contributions.searchEmpty'
+  | 'payments.transferToAdmin'
+  | 'payments.cardPayDisabled'
+  | 'payments.payoutDirect'
+  | 'messages.emptyTitle'
+  | 'messages.emptyMessage'
+  | 'messages.memberFallback'
+  | 'messages.youPrefix'
+  | 'messages.sendMessage'
+  | 'messages.sendTo'
+  | 'messages.you'
+  | 'messages.roleAdminContributor'
+  | 'messages.roleMember'
+  | 'messages.roleAdmin'
+  | 'messages.roleAdminOrganizer'
+  | 'messages.collected'
+  | 'messages.collectingThisCycle'
+  | 'messages.searchPlaceholder'
+  | 'messages.searchEmpty'
+  | 'messages.renameHint'
+  | 'messages.saveNameTitle'
+  | 'messages.saveNameHint'
+  | 'messages.saveNameLabel'
+  | 'messages.saveNamePlaceholder'
+  | 'messages.saveNameClear'
+  | 'messages.saveNameAction'
+  | 'messages.profileNameLine'
+  | 'messages.threadEmpty'
+  | 'messages.inputPlaceholder'
+  | 'messages.send'
+  | 'messages.notInstalled'
+  | 'messages.sendFailed'
   | 'notifications.title'
   | 'notifications.empty'
   | 'notifications.signInHint'
   | 'notifications.markAllRead'
+  | 'notifications.filterTitle'
+  | 'notifications.filterAll'
+  | 'notifications.filterUnread'
+  | 'notifications.filterPayments'
+  | 'notifications.filterPayouts'
+  | 'notifications.filterMembers'
+  | 'notifications.filterEmpty'
   | 'notifications.notSetupTitle'
   | 'notifications.notSetupMessage'
   | 'notifications.emptyMessage'
@@ -186,6 +292,13 @@ export type TranslationKey =
   | 'auth.redirectHint'
   | 'auth.copyRedirectTitle'
   | 'auth.copyRedirectBody'
+  | 'auth.tapToCopyRedirect'
+  | 'auth.expoGoRedirectNote'
+  | 'auth.noCodeTitle'
+  | 'auth.noCodeStep1'
+  | 'auth.noCodeStep2'
+  | 'auth.noCodeStep3'
+  | 'auth.skipEmailEnterApp'
   | 'auth.previewUiOnly'
   | 'auth.verifyTitle'
   | 'auth.verifySubtitle'
@@ -440,21 +553,47 @@ export type TranslationKey =
   | 'admin.modeSwitch'
   | 'admin.dashboardTitle'
   | 'admin.dashboardSubtitle'
+  | 'admin.cardBrand'
+  | 'admin.cardHolder'
+  | 'admin.cardTapHint'
+  | 'admin.quickEarnings'
   | 'admin.kpiGroups'
-  | 'admin.kpiActiveCount'
+  | 'admin.kpiActiveCount_one'
+  | 'admin.kpiActiveCount_other'
+  | 'admin.kpiCompletedCount_one'
+  | 'admin.kpiCompletedCount_other'
   | 'admin.kpiMembers'
   | 'admin.kpiReceived'
+  | 'admin.kpiEarnings'
+  | 'admin.totalCollected'
   | 'admin.kpiOutstanding'
   | 'admin.kpiPending'
   | 'admin.kpiPayouts'
   | 'admin.createGroup'
   | 'admin.viewLedger'
   | 'admin.groupHealth'
+  | 'admin.managedGroups_one'
+  | 'admin.managedGroups_other'
+  | 'admin.noActiveGroupsShort'
+  | 'admin.noActiveGroupsShort_one'
+  | 'admin.noActiveGroupsShort_other'
+  | 'admin.groupCollected'
+  | 'admin.groupEarned'
+  | 'admin.groupCycles_one'
+  | 'admin.groupCycles_other'
+  | 'admin.groupDraftHint_one'
+  | 'admin.groupDraftHint_other'
+  | 'admin.groupPendingCount_one'
+  | 'admin.groupPendingCount_other'
   | 'admin.groupProgress'
   | 'admin.nextPayout'
   | 'admin.dateTbd'
   | 'admin.noGroupsYet'
   | 'admin.noGroupsHint'
+  | 'admin.noActiveGroupsHint'
+  | 'admin.dashboardLoadErrorTitle'
+  | 'admin.dashboardLoadErrorMessage'
+  | 'admin.tryAgain'
   | 'admin.verifyIdentity'
   | 'admin.recentActivity'
   | 'admin.ledgerIntro'
@@ -492,6 +631,7 @@ export type TranslationKey =
 export const TRANSLATION_KEYS: TranslationKey[] = [
   'nav.home',
   'nav.groups',
+  'nav.messages',
   'nav.contributions',
   'nav.alerts',
   'nav.profile',
@@ -509,6 +649,63 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'common.gotIt',
   'common.goToProfile',
   'common.loading',
+  'plural.group_one',
+  'plural.group_other',
+  'plural.member_one',
+  'plural.member_other',
+  'plural.memberNoun_one',
+  'plural.memberNoun_other',
+  'plural.cycle_one',
+  'plural.cycle_other',
+  'plural.spotLeft_one',
+  'plural.spotLeft_other',
+  'plural.moreMember_one',
+  'plural.moreMember_other',
+  'plural.activeCount_one',
+  'plural.activeCount_other',
+  'plural.finished_one',
+  'plural.finished_other',
+  'plural.roster_one',
+  'plural.roster_other',
+  'plural.contributionPaid_one',
+  'plural.contributionPaid_other',
+  'plural.cyclePosition_one',
+  'plural.cyclePosition_other',
+  'plural.groupMeta_one',
+  'plural.groupMeta_other',
+  'plural.poolMembers_one',
+  'plural.poolMembers_other',
+  'plural.sharedGroups_one',
+  'plural.sharedGroups_other',
+  'plural.noSharedGroups',
+  'group.draftTitle',
+  'group.draftStartWhenFull_one',
+  'group.draftStartWhenFull_other',
+  'group.draftOrganizerWhenFull_one',
+  'group.draftOrganizerWhenFull_other',
+  'group.draftWaitingAdmin_one',
+  'group.draftWaitingAdmin_other',
+  'group.draftRosterFull',
+  'group.draftWaitingTitle_one',
+  'group.draftWaitingTitle_other',
+  'group.draftNeedMore_one',
+  'group.draftNeedMore_other',
+  'group.draftJoinedLine_one',
+  'group.draftJoinedLine_other',
+  'group.draftReadyAdmin',
+  'group.draftReadyMember_one',
+  'group.draftReadyMember_other',
+  'group.draftUnlockHint_one',
+  'group.draftUnlockHint_other',
+  'group.membersSection',
+  'group.previewMembers_one',
+  'group.previewMembers_other',
+  'group.previewFull',
+  'group.rosterIncomplete',
+  'group.onlyAdminStarts_one',
+  'group.onlyAdminStarts_other',
+  'group.cycleFinished_one',
+  'group.cycleFinished_other',
   'home.welcomeBack',
   'home.welcomeBackName',
   'home.startFirstCircle',
@@ -552,6 +749,10 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'profile.changeContact',
   'profile.changeContactSubtitle',
   'profile.myGroups',
+  'profile.myGroupsSubtitle',
+  'profile.viewProfile',
+  'profile.hubTitle',
+  'profile.messagesHubSubtitle',
   'profile.contributionHistory',
   'profile.payoutHistory',
   'profile.inviteCodes',
@@ -609,6 +810,10 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'profileSetup.bannerTitle',
   'profileSetup.bannerBody',
   'profileSetup.completeSetup',
+  'profileSetup.reminderTitle',
+  'profileSetup.reminderBody',
+  'profileSetup.dismissReminder',
+  'profileSetup.swipeToDismiss',
   'groups.notInApp',
   'groups.notInAppBody',
   'groups.noGroups',
@@ -625,10 +830,50 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'contributions.pending',
   'contributions.totalPaid',
   'contributions.tapToPay',
+  'contributions.searchPlaceholder',
+  'contributions.searchEmpty',
+  'payments.transferToAdmin',
+  'payments.cardPayDisabled',
+  'payments.payoutDirect',
+  'messages.emptyTitle',
+  'messages.emptyMessage',
+  'messages.memberFallback',
+  'messages.youPrefix',
+  'messages.sendMessage',
+  'messages.sendTo',
+  'messages.you',
+  'messages.roleAdminContributor',
+  'messages.roleMember',
+  'messages.roleAdmin',
+  'messages.roleAdminOrganizer',
+  'messages.collected',
+  'messages.collectingThisCycle',
+  'messages.searchPlaceholder',
+  'messages.searchEmpty',
+  'messages.renameHint',
+  'messages.saveNameTitle',
+  'messages.saveNameHint',
+  'messages.saveNameLabel',
+  'messages.saveNamePlaceholder',
+  'messages.saveNameClear',
+  'messages.saveNameAction',
+  'messages.profileNameLine',
+  'messages.threadEmpty',
+  'messages.inputPlaceholder',
+  'messages.send',
+  'messages.notInstalled',
+  'messages.sendFailed',
   'notifications.title',
   'notifications.empty',
   'notifications.signInHint',
   'notifications.markAllRead',
+  'notifications.filterTitle',
+  'notifications.filterAll',
+  'notifications.filterUnread',
+  'notifications.filterPayments',
+  'notifications.filterPayouts',
+  'notifications.filterMembers',
+  'notifications.filterEmpty',
   'notifications.notSetupTitle',
   'notifications.notSetupMessage',
   'notifications.emptyMessage',
@@ -677,6 +922,13 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'auth.redirectHint',
   'auth.copyRedirectTitle',
   'auth.copyRedirectBody',
+  'auth.tapToCopyRedirect',
+  'auth.expoGoRedirectNote',
+  'auth.noCodeTitle',
+  'auth.noCodeStep1',
+  'auth.noCodeStep2',
+  'auth.noCodeStep3',
+  'auth.skipEmailEnterApp',
   'auth.previewUiOnly',
   'auth.verifyTitle',
   'auth.verifySubtitle',
@@ -931,21 +1183,47 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'admin.modeSwitch',
   'admin.dashboardTitle',
   'admin.dashboardSubtitle',
+  'admin.cardBrand',
+  'admin.cardHolder',
+  'admin.cardTapHint',
+  'admin.quickEarnings',
   'admin.kpiGroups',
-  'admin.kpiActiveCount',
+  'admin.kpiActiveCount_one',
+  'admin.kpiActiveCount_other',
+  'admin.kpiCompletedCount_one',
+  'admin.kpiCompletedCount_other',
   'admin.kpiMembers',
   'admin.kpiReceived',
+  'admin.kpiEarnings',
+  'admin.totalCollected',
   'admin.kpiOutstanding',
   'admin.kpiPending',
   'admin.kpiPayouts',
   'admin.createGroup',
   'admin.viewLedger',
   'admin.groupHealth',
+  'admin.managedGroups_one',
+  'admin.managedGroups_other',
+  'admin.noActiveGroupsShort',
+  'admin.noActiveGroupsShort_one',
+  'admin.noActiveGroupsShort_other',
+  'admin.groupCollected',
+  'admin.groupEarned',
+  'admin.groupCycles_one',
+  'admin.groupCycles_other',
+  'admin.groupDraftHint_one',
+  'admin.groupDraftHint_other',
+  'admin.groupPendingCount_one',
+  'admin.groupPendingCount_other',
   'admin.groupProgress',
   'admin.nextPayout',
   'admin.dateTbd',
   'admin.noGroupsYet',
   'admin.noGroupsHint',
+  'admin.noActiveGroupsHint',
+  'admin.dashboardLoadErrorTitle',
+  'admin.dashboardLoadErrorMessage',
+  'admin.tryAgain',
   'admin.verifyIdentity',
   'admin.recentActivity',
   'admin.ledgerIntro',

@@ -1,59 +1,84 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
-import { Button, Card, StatusBadge, Text } from '@/components/ui';
+import { MyMoneySummaryCard } from '@/components/MyMoneySummaryCard';
+import { PlatformIcon } from '@/components/navigation/PlatformIcon';
+import { Button, Card, Input, StatusBadge, Text } from '@/components/ui';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminMode } from '@/contexts/AdminModeContext';
 import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { formatDate, formatNaira } from '@/lib/format';
+import { formatDay, formatDayAndTime, formatNaira } from '@/lib/format';
+import {
+  fetchMemberMoneySummary,
+  type MemberMoneySummary,
+} from '@/lib/money-summary';
 import {
   getUserContributions,
-  summarizeContributions,
   type UserContributionRow,
 } from '@/lib/user-contributions';
-import { spacing, useThemeTokens } from '@/theme';
+import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
 export default function ContributionsScreen() {
   const { user, profile, canSave } = useAuth();
+  const { loading: adminLoading } = useAdminMode();
   const { t } = useTranslation();
   const router = useRouter();
-  const { colors } = useThemeTokens();
+  const { colors, scheme, radius } = useThemeTokens();
 
   const [rows, setRows] = useState<UserContributionRow[]>([]);
+  const [moneySummary, setMoneySummary] = useState<MemberMoneySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [query, setQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const load = useCallback(async () => {
-    if (!user) {
+    if (!user?.id) {
       setRows([]);
+      setMoneySummary(null);
       setLoadError('');
       setLoading(false);
       return;
     }
     try {
       setLoadError('');
-      const data = await getUserContributions(user.id);
+      const [data, summary] = await Promise.all([
+        getUserContributions(user.id),
+        fetchMemberMoneySummary(user.id),
+      ]);
+
       setRows(data);
+      setMoneySummary(summary);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Could not load contributions');
       setRows([]);
+      setMoneySummary(null);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
+
+  // Reload when the signed-in account changes (not only when the tab regains focus).
+  useEffect(() => {
+    setRows([]);
+    setLoading(true);
+    void load();
+  }, [user?.id, load]);
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
-      load();
-    }, [load])
+      if (user?.id) void load();
+    }, [user?.id, load])
   );
 
-  const summary = summarizeContributions(rows);
-
+  const accountName =
+    profile?.full_name?.trim() ||
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() ||
+    'You';
   const onRefresh = async () => {
     setRefreshing(true);
     await load();
@@ -69,7 +94,25 @@ export default function ContributionsScreen() {
     router.push(`/group/${row.groupId}`);
   };
 
-  if (loading) {
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((row) => {
+      if (row.groupName.toLowerCase().includes(q)) return true;
+      if (`cycle ${row.cycleNumber}`.includes(q) || String(row.cycleNumber).includes(q)) return true;
+      if (row.status.includes(q)) return true;
+      if (formatNaira(row.amount).toLowerCase().includes(q)) return true;
+      return false;
+    });
+  }, [rows, query]);
+
+  const searchActive = searchOpen || query.trim().length > 0;
+
+  const toggleSearch = () => {
+    setSearchOpen((open) => !open);
+  };
+
+  if (loading || adminLoading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} size="large" />
@@ -100,36 +143,50 @@ export default function ContributionsScreen() {
         </Card>
       ) : null}
 
+      {moneySummary ? (
+        <MyMoneySummaryCard accountName={accountName} summary={moneySummary} />
+      ) : null}
+
       {rows.length > 0 ? (
-        <Card variant="elevated" style={styles.summaryCard}>
-          <Text variant="bodyMedium" style={{ fontWeight: '700', marginBottom: spacing.md }}>
-            {t('contributions.summary')}
-          </Text>
-          <View style={styles.summaryRow}>
-            <View style={styles.stat}>
-              <Text variant="headingSmall" color="accent">
-                {summary.paid}
-              </Text>
-              <Text variant="caption" color="secondary">
-                {t('contributions.paid')}
-              </Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.stat}>
-              <Text variant="headingSmall">{summary.pending}</Text>
-              <Text variant="caption" color="secondary">
-                {t('contributions.pending')}
-              </Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.stat}>
-              <Text variant="headingSmall">{formatNaira(summary.totalPaidAmount)}</Text>
-              <Text variant="caption" color="secondary">
-                {t('contributions.totalPaid')}
-              </Text>
-            </View>
+        <>
+          <View style={styles.listHeader}>
+            <Text variant="bodyMedium" style={styles.listTitle}>
+              Payments
+            </Text>
+            <Pressable
+              onPress={toggleSearch}
+              accessibilityRole="button"
+              accessibilityLabel={t('admin.searchLabel')}
+              style={({ pressed }) => [
+                styles.searchBtn,
+                {
+                  backgroundColor: primaryAlpha(scheme, searchActive ? 16 : 8),
+                  borderColor: searchActive ? colors.primary : colors.border,
+                  borderRadius: radius.md,
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}>
+              <PlatformIcon
+                name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
+                size={22}
+                color={searchActive ? colors.primary : colors.textPrimary}
+              />
+              {query.trim() ? (
+                <View style={[styles.searchDot, { backgroundColor: colors.primary }]} />
+              ) : null}
+            </Pressable>
           </View>
-        </Card>
+          {searchOpen ? (
+            <Input
+              variant="search"
+              placeholder={t('contributions.searchPlaceholder')}
+              value={query}
+              onChangeText={setQuery}
+              containerStyle={styles.search}
+              autoFocus
+            />
+          ) : null}
+        </>
       ) : null}
 
       {loadError ? (
@@ -140,9 +197,11 @@ export default function ContributionsScreen() {
 
       {rows.length === 0 && !loadError ? (
         <EmptyState title={t('contributions.empty')} message={t('contributions.emptyMessage')} />
+      ) : filteredRows.length === 0 ? (
+        <EmptyState title={t('contributions.empty')} message={t('contributions.searchEmpty')} />
       ) : (
         <View style={styles.list}>
-          {rows.map((row) => (
+          {filteredRows.map((row) => (
             <Pressable
               key={row.id}
               onPress={() => openRow(row)}
@@ -154,8 +213,8 @@ export default function ContributionsScreen() {
                       {row.groupName}
                     </Text>
                     <Text variant="caption" color="secondary">
-                      Cycle {row.cycleNumber}
-                      {row.dueDate ? ` · Due ${formatDate(row.dueDate)}` : ''}
+                      {accountName} · Cycle {row.cycleNumber}
+                      {row.dueDate ? ` · Due ${formatDay(row.dueDate)}` : ''}
                     </Text>
                   </View>
                   <StatusBadge status={row.status} />
@@ -164,8 +223,8 @@ export default function ContributionsScreen() {
                   <Text variant="headingSmall">{formatNaira(row.amount)}</Text>
                   <Text variant="caption" color="secondary">
                     {row.status === 'paid' && row.paid_at
-                      ? `Paid ${formatDate(row.paid_at)}`
-                      : `Created ${formatDate(row.created_at)}`}
+                      ? `Paid ${formatDayAndTime(row.paid_at)}`
+                      : `Created ${formatDayAndTime(row.created_at)}`}
                   </Text>
                 </View>
                 {row.status === 'pending' ? (
@@ -188,10 +247,30 @@ const styles = StyleSheet.create({
   controlCard: { marginBottom: spacing.md },
   controlBody: { marginBottom: spacing.sm, lineHeight: 20 },
   controlBtn: { marginBottom: 0 },
-  summaryCard: { marginBottom: spacing.md, paddingVertical: spacing.md },
-  summaryRow: { flexDirection: 'row', alignItems: 'center' },
-  stat: { flex: 1, alignItems: 'center' },
-  statDivider: { width: 1, height: 36 },
+  listHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  listTitle: { fontWeight: '700', flex: 1 },
+  searchBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  searchDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  search: { marginBottom: spacing.md },
   error: { marginBottom: spacing.md, lineHeight: 20 },
   list: { gap: spacing.xs },
   rowCard: { marginBottom: spacing.sm },

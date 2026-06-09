@@ -48,7 +48,10 @@ Deno.serve(async (req) => {
     if (!allPaid) throw new Error('Not all contributions are paid');
 
     const total = contributions!.reduce((sum, c) => sum + c.amount, 0);
-    const feePercent = cycle.groups.admin_fee_percent ?? 0;
+    // The admin doesn't charge themselves: when the admin is the recipient,
+    // no fee is deducted and they collect the full pool.
+    const isAdminRecipient = cycle.recipient_id === cycle.groups.admin_id;
+    const feePercent = isAdminRecipient ? 0 : cycle.groups.admin_fee_percent ?? 0;
     const payoutAmount = Math.floor(total * (1 - feePercent / 100));
 
     const { data: recipient } = await supabase

@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { translate } from '@/lib/i18n';
+import { translate, translatePlural } from '@/lib/i18n';
 import type { TranslationKey } from '@/lib/i18n/keys';
+import type { PluralFn } from '@/lib/i18n/plural';
 import { getLanguageLabel, type AppLanguage } from '@/lib/languages';
 import { loadPreferredLanguage, savePreferredLanguage } from '@/lib/language-preference';
 
@@ -10,6 +11,7 @@ interface LanguageContextValue {
   loading: boolean;
   setLanguage: (code: AppLanguage) => Promise<void>;
   t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
+  tp: PluralFn;
 }
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
@@ -35,6 +37,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     [language]
   );
 
+  const tp = useCallback(
+    (count: number, oneKey: TranslationKey, otherKey: TranslationKey, vars?: Record<string, string | number>) =>
+      translatePlural(language, count, oneKey, otherKey, vars),
+    [language]
+  );
+
   const value = useMemo(
     () => ({
       language,
@@ -42,8 +50,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       loading,
       setLanguage,
       t,
+      tp,
     }),
-    [language, loading, t]
+    [language, loading, t, tp]
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
@@ -56,6 +65,6 @@ export function useLanguage() {
 }
 
 export function useTranslation() {
-  const { language, t, setLanguage, languageLabel, loading } = useLanguage();
-  return { language, t, setLanguage, languageLabel, loading };
+  const { language, t, tp, setLanguage, languageLabel, loading } = useLanguage();
+  return { language, t, tp, setLanguage, languageLabel, loading };
 }

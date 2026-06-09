@@ -55,6 +55,36 @@ export async function sendPush(
   }
 }
 
+type ReminderPrefs = {
+  reminders_enabled?: boolean | null;
+  reminder_contributions?: boolean | null;
+  reminder_overdue?: boolean | null;
+  reminder_payouts?: boolean | null;
+};
+
+/**
+ * Whether a push of the given type is allowed by the user's reminder settings.
+ * Transactional/social events (payments, joins, messages) always pass; the
+ * scheduled "reminder" categories respect the per-category toggles.
+ */
+function isPushAllowedByPrefs(type: string | undefined, prefs: ReminderPrefs): boolean {
+  const enabled = (v: boolean | null | undefined) => v !== false; // default on when null/missing
+
+  switch (type) {
+    case 'contribution_due':
+      return enabled(prefs.reminders_enabled) && enabled(prefs.reminder_contributions);
+    case 'contribution_overdue':
+      return enabled(prefs.reminders_enabled) && enabled(prefs.reminder_overdue);
+    case 'payout_soon':
+    case 'payout_completed':
+      return enabled(prefs.reminders_enabled) && enabled(prefs.reminder_payouts);
+    default:
+      // payment_confirmed, payment_received, member_joined, group_joined,
+      // direct_message, etc. are transactional/social and not gated by reminders.
+      return true;
+  }
+}
+
 export async function sendPushToUser(
   supabase: SupabaseClient,
   userId: string,
@@ -64,11 +94,17 @@ export async function sendPushToUser(
 ): Promise<boolean> {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('expo_push_token, push_enabled')
+    .select(
+      'expo_push_token, push_enabled, reminders_enabled, reminder_contributions, reminder_overdue, reminder_payouts'
+    )
     .eq('id', userId)
     .single();
 
   if (!profile?.expo_push_token || profile.push_enabled === false) {
+    return false;
+  }
+
+  if (!isPushAllowedByPrefs(data.type, profile as ReminderPrefs)) {
     return false;
   }
 

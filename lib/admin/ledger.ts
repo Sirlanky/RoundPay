@@ -7,6 +7,7 @@ export interface LedgerRow {
   groupId: string;
   groupName: string;
   memberName: string;
+  memberAvatarUrl: string | null;
   amount: number;
   status: ContributionStatus;
   dueDate: string | null;
@@ -25,7 +26,7 @@ type RawRow = {
     due_date: string | null;
     groups: { id: string; name: string } | { id: string; name: string }[] | null;
   } | null;
-  profiles: { full_name: string | null } | null;
+  profiles: { full_name: string | null; avatar_url: string | null } | null;
 };
 
 export async function fetchAdminLedger(
@@ -53,7 +54,7 @@ export async function fetchAdminLedger(
       paid_at,
       user_id,
       cycles (cycle_number, due_date, groups (id, name)),
-      profiles:profiles!contributions_user_id_fkey (full_name)
+      profiles:profiles!contributions_user_id_fkey (full_name, avatar_url)
     `
     )
     .in('cycle_id', cycleIds)
@@ -90,6 +91,7 @@ export async function fetchAdminLedger(
       groupId: groupObj.id,
       groupName: groupObj.name,
       memberName,
+      memberAvatarUrl: raw.profiles?.avatar_url?.trim() || null,
       amount: raw.amount,
       status: raw.status,
       dueDate: cycle.due_date,

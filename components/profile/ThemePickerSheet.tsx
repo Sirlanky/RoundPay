@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
+import { PlatformIcon } from '@/components/navigation/PlatformIcon';
 import { Button } from '@/components/ui';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { BACKGROUND_PRESETS, type BackgroundPresetId } from '@/lib/background-presets';
@@ -90,7 +90,7 @@ export function ThemePickerSheet({
                     {isSelected ? <Text style={styles.check}>✓</Text> : null}
                   </View>
                   <View style={[styles.iconWrap, { backgroundColor: primaryAlpha(scheme, 12) }]}>
-                    <SymbolView name={option.icon as never} tintColor={colors.primary} size={20} />
+                    <PlatformIcon name={option.icon} color={colors.primary} size={20} />
                   </View>
                   <View style={styles.rowBody}>
                     <Text style={[styles.label, { color: isSelected ? colors.primary : colors.textPrimary }]}>

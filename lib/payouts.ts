@@ -1,3 +1,4 @@
+import { cyclePayoutBreakdown } from './admin-fee';
 import { getAccessToken, mapPaystackFunctionError } from './auth-session';
 import { getFunctionsUrl, supabase } from './supabase';
 import { isPaystackConfigured } from './paystack';
@@ -76,7 +77,12 @@ async function recordCyclePayoutDirect(cycleId: string) {
   }
 
   const total = contributions.reduce((sum, c) => sum + c.amount, 0);
-  const payoutAmount = Math.floor(total * (1 - (group.admin_fee_percent ?? 0) / 100));
+  const { net: payoutAmount } = cyclePayoutBreakdown({
+    grossPool: total,
+    adminFeePercent: group.admin_fee_percent ?? 0,
+    recipientId: cycle.recipient_id,
+    adminId: group.admin_id,
+  });
 
   const { error: payoutErr } = await supabase.from('payouts').upsert(
     {

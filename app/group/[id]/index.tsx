@@ -1,18 +1,21 @@
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { GroupMemberMessageRow, type GroupMessagePerson } from '@/components/group/GroupMemberMessageRow';
 import { Button, Card } from '@/components/ui';
 import { CycleProgress } from '@/components/CycleProgress';
 import { CyclePaymentsPanel } from '@/components/CyclePaymentsPanel';
 import { DeleteDraftGroupCard } from '@/components/DeleteDraftGroupCard';
 import { DraftGroupPanel } from '@/components/DraftGroupPanel';
 import { EditDraftGroupSheet, type DraftGroupFormValues } from '@/components/EditDraftGroupSheet';
+import { GroupCycleHistory } from '@/components/GroupCycleHistory';
 import { InviteCodeCard } from '@/components/InviteCodeCard';
 import { Screen } from '@/components/Screen';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { formatNaira, frequencyLabel } from '@/lib/format';
+import { cyclePositionLabel, isLastCycle, payoutFromContributions } from '@/lib/cycle-utils';
 import { messageFromGroupError } from '@/lib/group-errors';
 import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
 import { promptSaveAuth } from '@/lib/prompt-save-auth';
@@ -20,12 +23,14 @@ import { memberDisplayName, type MemberWithProfile } from '@/lib/members';
 import { advanceCycle, deleteDraftGroup, setAdminParticipation, startGroup, updateDraftGroupSettings } from '@/lib/groups';
 import { sendCyclePayout } from '@/lib/payouts';
 import { isPaystackConfigured } from '@/lib/paystack';
+import { fetchPublicProfile, type PublicProfile } from '@/lib/public-profile';
 import { resolveRouteParam } from '@/lib/route-params';
+import { fetchGroupAdminFees } from '@/lib/money-summary';
 import { useContributions } from '@/hooks/useContributions';
 import { useGroup } from '@/hooks/useGroup';
 import { recordContributionPayment } from '@/lib/contributions';
 import { membersStillNeeded, rosterIsComplete, validateCreateGroupInput } from '@/lib/group-validation';
-import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
+import { spacing, useThemeTokens } from '@/theme';
 
 export default function GroupDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
@@ -38,13 +43,16 @@ export default function GroupDetailScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [historyToken, setHistoryToken] = useState(0);
+  const [groupFeesEarned, setGroupFeesEarned] = useState<number | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [editValues, setEditValues] = useState<DraftGroupFormValues | null>(null);
+  const [adminProfile, setAdminProfile] = useState<PublicProfile | null>(null);
   const router = useRouter();
-  const { t } = useTranslation();
-  const { colors, scheme } = useThemeTokens();
+  const { t, tp } = useTranslation();
+  const { colors } = useThemeTokens();
 
   const memberByUserId = useMemo(() => {
     const map = new Map<string, MemberWithProfile>();
@@ -54,6 +62,94 @@ export default function GroupDetailScreen() {
 
   const isAdmin = group?.admin_id === user?.id;
   const isDraft = group?.status === 'draft';
+  const canMessageInGroup = group?.status === 'active' || group?.status === 'completed';
+
+  useEffect(() => {
+    if (!group || !canMessageInGroup || !group.admin_id) {
+      setAdminProfile(null);
+      return;
+    }
+    const adminListed = members.some((m) => m.user_id === group.admin_id);
+    if (adminListed) {
+      setAdminProfile(null);
+      return;
+    }
+    let active = true;
+    void fetchPublicProfile(group.admin_id).then((p) => {
+      if (active) setAdminProfile(p);
+    });
+    return () => {
+      active = false;
+    };
+  }, [group, members, canMessageInGroup]);
+
+  const memberPeople = useMemo((): GroupMessagePerson[] => {
+    return (members as MemberWithProfile[]).map((m) => {
+      const isCollector = currentCycle?.recipient_id === m.user_id;
+      const subtitleParts = [
+        m.role === 'admin' ? t('messages.roleAdminContributor') : t('messages.roleMember'),
+        m.has_collected ? t('messages.collected') : null,
+        isCollector ? t('messages.collectingThisCycle') : null,
+      ].filter(Boolean);
+      return {
+        userId: m.user_id,
+        name: memberDisplayName(m),
+        avatarUrl: m.profile?.avatar_url,
+        subtitle: subtitleParts.join(' · '),
+        isYou: m.user_id === user?.id,
+      };
+    });
+  }, [members, currentCycle?.recipient_id, user?.id, t]);
+
+  const adminPerson = useMemo((): GroupMessagePerson | null => {
+    if (!adminProfile || !group) return null;
+    const name =
+      adminProfile.full_name?.trim() ||
+      [adminProfile.first_name, adminProfile.last_name].filter(Boolean).join(' ').trim() ||
+      t('messages.roleAdmin');
+    return {
+      userId: adminProfile.id,
+      name,
+      avatarUrl: adminProfile.avatar_url,
+      subtitle: t('messages.roleAdminOrganizer'),
+      isYou: adminProfile.id === user?.id,
+    };
+  }, [adminProfile, group, user?.id, t]);
+
+  const handleMemberMessage = (targetUserId: string) => {
+    if (!promptProfileSetupForTransfer(profile, router, t)) return;
+    if (!canSave) {
+      promptSaveAuth({
+        action: 'send messages',
+        onSignIn: () => {
+          exitBuildMode();
+          router.replace('/(auth)/login');
+        },
+        onGuest: async () => {
+          await signInAsGuest();
+          router.push(`/messages/${targetUserId}` as Href);
+        },
+      });
+      return;
+    }
+    router.push(`/messages/${targetUserId}` as Href);
+  };
+
+  const loadGroupFees = useCallback(async () => {
+    if (!id || !group || group.admin_id !== user?.id || !group.admin_fee_percent) {
+      setGroupFeesEarned(null);
+      return;
+    }
+    try {
+      setGroupFeesEarned(await fetchGroupAdminFees(id));
+    } catch {
+      setGroupFeesEarned(null);
+    }
+  }, [group, id, user?.id]);
+
+  useEffect(() => {
+    void loadGroupFees();
+  }, [loadGroupFees, historyToken]);
   const adminInRotation = members.some((m) => m.user_id === user?.id);
   const rosterComplete = group ? rosterIsComplete(members.length, group.max_members) : false;
   const canStartDraft = isDraft && isAdmin && rosterComplete;
@@ -119,7 +215,7 @@ export default function GroupDetailScreen() {
       Alert.alert(
         'Roster not complete',
         need > 0
-          ? `All ${group!.max_members} members must join before starting. ${need} more spot${need === 1 ? '' : 's'} left — share the invite code below.`
+          ? `All ${tp(group!.max_members, 'plural.member_one', 'plural.member_other', { count: group!.max_members })} must join before starting. ${tp(need, 'plural.spotLeft_one', 'plural.spotLeft_other', { count: need })} — share the invite code below.`
           : 'All members must join before starting. Share the invite code below.'
       );
       return;
@@ -149,28 +245,64 @@ export default function GroupDetailScreen() {
   };
 
   const handlePayout = async () => {
-    if (!currentCycle) return;
+    if (!currentCycle || !group) return;
+
+    const finalCycle = isLastCycle(currentCycle.cycle_number, members.length);
+    const payout = payoutFromContributions({
+      contributions,
+      adminFeePercent: group.admin_fee_percent ?? 0,
+      recipientId: currentCycle.recipient_id,
+      adminId: group.admin_id,
+    });
 
     const usePaystack = isPaystackConfigured();
+    const amountLine = payout.feeAmount > 0
+      ? `${formatNaira(payout.net)} to collector (${formatNaira(payout.feeAmount)} admin fee from ${formatNaira(payout.gross)} pool)`
+      : `${formatNaira(payout.net)} to collector`;
+
     Alert.alert(
-      usePaystack ? 'Send payout?' : 'Record payout sent?',
-      usePaystack
-        ? 'Send this cycle’s pot to the collector via Paystack. They need a verified bank account in Profile.'
-        : 'Mark this cycle as paid out to the collector (use when you sent cash or bank transfer).',
+      finalCycle
+        ? usePaystack
+          ? 'Send final payout & end circle?'
+          : 'Record final payout & end circle?'
+        : usePaystack
+          ? 'Send payout?'
+          : 'Record payout sent?',
+      finalCycle
+        ? `This is the last rotation (${cyclePositionLabel(currentCycle.cycle_number, members.length)}). ${amountLine}. After payout the circle will close — everyone will have collected once.`
+        : usePaystack
+          ? `${amountLine}. They need a verified bank account in Profile.`
+          : `${amountLine}. Use when you sent cash or bank transfer.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: usePaystack ? 'Send payout' : 'Record sent',
+          text: finalCycle
+            ? usePaystack
+              ? 'Send & end circle'
+              : 'Record & end circle'
+            : usePaystack
+              ? 'Send payout'
+              : 'Record sent',
           onPress: async () => {
             setActionLoading(true);
             try {
               const result = await sendCyclePayout(currentCycle.id);
-              await refetch();
+              if (finalCycle) {
+                await advanceCycle(id!);
+              }
+              await Promise.all([refetch(), refetchContributions()]);
+              setHistoryToken((t) => t + 1);
               Alert.alert(
-                result.transfer_code === 'manual' ? 'Payout recorded' : 'Payout sent',
-                result.transfer_code === 'manual'
-                  ? 'Cycle marked paid out. You can start the next cycle.'
-                  : 'Funds sent to this cycle’s collector.'
+                finalCycle
+                  ? 'Circle complete'
+                  : result.transfer_code === 'manual'
+                    ? 'Payout recorded'
+                    : 'Payout sent',
+                finalCycle
+                  ? 'Final payout recorded. Everyone has collected — this group is now in History.'
+                  : result.transfer_code === 'manual'
+                    ? 'Cycle marked paid out. You can start the next cycle when ready.'
+                    : 'Funds sent to this cycle’s collector.'
               );
             } catch (e) {
               Alert.alert('Could not send payout', messageFromGroupError(e));
@@ -184,15 +316,17 @@ export default function GroupDetailScreen() {
 
   const handleAdvance = async () => {
     if (!id) return;
+
     setActionLoading(true);
     try {
       const next = await advanceCycle(id);
       await Promise.all([refetch(), refetchContributions()]);
+      setHistoryToken((t) => t + 1);
       Alert.alert(
-        next ? 'Next cycle' : 'Complete',
+        next ? 'Next cycle' : 'Circle complete',
         next
-          ? `Cycle ${next.cycle_number} started. Record payments for each member below.`
-          : 'Everyone has collected. Group finished.'
+          ? `${cyclePositionLabel(next.cycle_number, members.length)} started. Record payments for each member below.`
+          : 'Everyone has collected. This group is now in History.'
       );
     } catch (e) {
       Alert.alert('Error', messageFromGroupError(e));
@@ -321,6 +455,22 @@ export default function GroupDetailScreen() {
 
   const potSize = formatNaira(group.contribution_amount * members.length);
   const projectedPot = formatNaira(group.contribution_amount * group.max_members);
+  const collectorPayout =
+    !isDraft && currentCycle && group.admin_fee_percent > 0
+      ? payoutFromContributions({
+          contributions,
+          adminFeePercent: group.admin_fee_percent,
+          recipientId: currentCycle.recipient_id,
+          adminId: group.admin_id,
+          estimateIfIncomplete: true,
+        }).net
+      : null;
+  const feeMeta =
+    group.admin_fee_percent > 0
+      ? adminInRotation
+        ? ` · ${group.admin_fee_percent}% fee (not on admin's turn)`
+        : ` · ${group.admin_fee_percent}% admin fee`
+      : '';
   const spotsLeft = membersStillNeeded(members.length, group.max_members);
 
   return (
@@ -331,6 +481,8 @@ export default function GroupDetailScreen() {
       onRefresh={async () => {
         setRefreshing(true);
         await Promise.all([refetch(), refetchContributions()]);
+        setHistoryToken((t) => t + 1);
+        await loadGroupFees();
         setRefreshing(false);
       }}>
       <Card style={styles.hero}>
@@ -350,7 +502,20 @@ export default function GroupDetailScreen() {
         <Text style={[styles.meta, { color: colors.textSecondary }]}>
           {frequencyLabel(group.frequency)}
           {isDraft ? ` · up to ${projectedPot} pot` : ` · Pot ${potSize}`}
+          {!isDraft && collectorPayout != null && collectorPayout !== group.contribution_amount * members.length
+            ? ` · Collector receives ${formatNaira(collectorPayout)}`
+            : ''}
+          {feeMeta}
         </Text>
+        {isAdmin && group.admin_fee_percent > 0 && groupFeesEarned !== null ? (
+          <Pressable
+            onPress={() => router.push('/profile/earnings' as Href)}
+            style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1, marginTop: spacing.sm }]}>
+            <Text style={{ color: colors.success, fontWeight: '700', fontSize: 15 }}>
+              Admin fees · {formatNaira(groupFeesEarned)}
+            </Text>
+          </Pressable>
+        ) : null}
         {isDraft ? (
           <InviteCodeCard groupName={group.name} inviteCode={group.invite_code} />
         ) : null}
@@ -369,7 +534,11 @@ export default function GroupDetailScreen() {
         <Card style={{ marginBottom: spacing.md }}>
           <Text style={[styles.section, { color: colors.textPrimary, marginTop: 0 }]}>Group settings</Text>
           <Text style={[styles.actionHint, { color: colors.textSecondary, textAlign: 'left', marginTop: 0 }]}>
-            {group.max_members} members · {formatNaira(group.contribution_amount)} each
+            {tp(group.max_members, 'plural.groupMeta_one', 'plural.groupMeta_other', {
+              count: group.max_members,
+              amount: formatNaira(group.contribution_amount),
+            })}
+            {group.admin_fee_percent > 0 ? ` · ${group.admin_fee_percent}% admin fee` : ''}
           </Text>
           <Button
             title="Edit settings"
@@ -399,7 +568,12 @@ export default function GroupDetailScreen() {
       ) : null}
 
       {!isDraft && !contribLoading && (
-        <CycleProgress paidCount={paidCount} totalCount={contributions.length} cycle={currentCycle} />
+        <CycleProgress
+          paidCount={paidCount}
+          totalCount={contributions.length}
+          cycle={currentCycle}
+          memberCount={members.length}
+        />
       )}
 
       {!isDraft && !contribLoading && (
@@ -417,30 +591,32 @@ export default function GroupDetailScreen() {
       )}
 
       <Text style={[styles.section, { color: colors.textPrimary }]}>
-        Members ({members.length}/{group.max_members})
+        {t('group.membersSection', { current: members.length, max: group.max_members })}
       </Text>
-      {(members as MemberWithProfile[]).map((m) => {
-        const isCollector = currentCycle?.recipient_id === m.user_id;
-        const isYou = m.user_id === user?.id;
-        return (
-          <View key={m.id} style={[styles.memberRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={[styles.orderBadge, { backgroundColor: primaryAlpha(scheme, 32) }]}>
-              <Text style={{ color: colors.primary, fontWeight: '700' }}>{m.rotation_order}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
-                {memberDisplayName(m)}
-                {isYou ? ' (you)' : ''}
-              </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                {m.role === 'admin' ? 'Admin · Contributor' : 'Member'}
-                {m.has_collected ? ' · Collected' : ''}
-                {isCollector ? ' · Collecting this cycle' : ''}
-              </Text>
-            </View>
-          </View>
-        );
-      })}
+      {adminPerson ? (
+        <GroupMemberMessageRow
+          person={adminPerson}
+          canMessage={canMessageInGroup}
+          onMessage={handleMemberMessage}
+        />
+      ) : null}
+      {memberPeople.map((person) => (
+        <GroupMemberMessageRow
+          key={person.userId}
+          person={person}
+          canMessage={canMessageInGroup}
+          onMessage={handleMemberMessage}
+        />
+      ))}
+
+      {!isDraft ? (
+        <GroupCycleHistory
+          groupId={group.id}
+          adminId={group.admin_id}
+          adminFeePercent={group.admin_fee_percent}
+          reloadToken={historyToken}
+        />
+      ) : null}
 
       <View style={styles.actions}>
         {isDraft && isAdmin ? (
@@ -449,7 +625,7 @@ export default function GroupDetailScreen() {
               title={
                 rosterComplete
                   ? 'Start group'
-                  : `Roster incomplete (${members.length}/${group.max_members})`
+                  : t('group.rosterIncomplete', { current: members.length, max: group.max_members })
               }
               onPress={handleStart}
               loading={actionLoading}
@@ -457,7 +633,8 @@ export default function GroupDetailScreen() {
             />
             {!canStartDraft && !rosterComplete ? (
               <Text style={[styles.actionHint, { color: colors.textSecondary }]}>
-                {spotsLeft} more member{spotsLeft === 1 ? '' : 's'} must join before you can start.
+                {tp(spotsLeft, 'plural.moreMember_one', 'plural.moreMember_other', { count: spotsLeft })} must join
+                before you can start.
               </Text>
             ) : !canStartDraft && rosterComplete ? (
               <Text style={[styles.actionHint, { color: colors.textSecondary }]}>
@@ -469,20 +646,51 @@ export default function GroupDetailScreen() {
 
         {isDraft && !isAdmin ? (
           <Text style={[styles.actionHint, { color: colors.textSecondary }]}>
-            Only the admin can start the group once all {group.max_members} members have joined.
+            {tp(group.max_members, 'group.onlyAdminStarts_one', 'group.onlyAdminStarts_other', {
+              count: group.max_members,
+            })}
           </Text>
         ) : null}
 
-        {isAdmin && currentCycle?.status === 'completed' && (
-          <Button
-            title={isPaystackConfigured() ? 'Send payout (Paystack)' : 'Record payout sent'}
-            onPress={handlePayout}
-            loading={actionLoading}
-          />
-        )}
-        {isAdmin && currentCycle?.status === 'paid_out' && group.status === 'active' && (
+        {isAdmin && currentCycle?.status === 'completed' && group.status === 'active' ? (
+          <>
+            <Button
+              title={
+                isLastCycle(currentCycle.cycle_number, members.length)
+                  ? isPaystackConfigured()
+                    ? 'Send final payout & end circle'
+                    : 'Record final payout & end circle'
+                  : isPaystackConfigured()
+                    ? 'Send payout (Paystack)'
+                    : 'Record payout sent'
+              }
+              onPress={handlePayout}
+              loading={actionLoading}
+            />
+            {isLastCycle(currentCycle.cycle_number, members.length) ? (
+              <Text style={[styles.actionHint, { color: colors.textSecondary }]}>
+                Last rotation — payout closes the circle for everyone.
+              </Text>
+            ) : null}
+          </>
+        ) : null}
+        {isAdmin &&
+        currentCycle?.status === 'paid_out' &&
+        group.status === 'active' &&
+        !isLastCycle(currentCycle.cycle_number, members.length) ? (
           <Button title="Start next cycle" onPress={handleAdvance} loading={actionLoading} variant="secondary" />
-        )}
+        ) : null}
+        {isAdmin &&
+        currentCycle?.status === 'paid_out' &&
+        group.status === 'active' &&
+        isLastCycle(currentCycle.cycle_number, members.length) ? (
+          <>
+            <Button title="End circle" onPress={handleAdvance} loading={actionLoading} />
+            <Text style={[styles.actionHint, { color: colors.textSecondary }]}>
+              Payout recorded. Tap to close the circle if you have not already.
+            </Text>
+          </>
+        ) : null}
       </View>
 
       {isDraft && isAdmin ? (
@@ -498,6 +706,7 @@ export default function GroupDetailScreen() {
           visible={editOpen}
           group={group}
           memberCount={members.length}
+          adminParticipates={adminInRotation}
           saving={editSaving}
           error={editError}
           values={editValues}
@@ -521,22 +730,6 @@ const styles = StyleSheet.create({
   adminHubBtn: { marginTop: spacing.sm, marginBottom: 0 },
   meta: { fontSize: 14, marginTop: 4 },
   section: { fontSize: 17, fontWeight: '600', marginBottom: spacing.sm, marginTop: spacing.sm },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginBottom: spacing.sm,
-    gap: spacing.md,
-  },
-  orderBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   actions: { marginTop: spacing.md, gap: spacing.xs },
   actionHint: { fontSize: 13, textAlign: 'center', lineHeight: 18, marginTop: spacing.xs },
 });

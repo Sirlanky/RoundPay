@@ -1,6 +1,6 @@
-import { SymbolView } from 'expo-symbols';
 import { StyleSheet, View } from 'react-native';
-import { Card, Text } from '@/components/ui';
+import { PlatformIcon } from '@/components/navigation/PlatformIcon';
+import { Card, Section, Text } from '@/components/ui';
 import type { HomeActivity } from '@/lib/home-dashboard';
 import { formatDate } from '@/lib/format';
 import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
@@ -16,12 +16,7 @@ export function AdminActivityFeed({ activities, title }: Props) {
   if (!activities.length) return null;
 
   return (
-    <View style={styles.wrap}>
-      {title ? (
-        <Text variant="headingSmall" style={styles.title}>
-          {title}
-        </Text>
-      ) : null}
+    <Section title={title ?? 'Recent activity'} style={styles.wrap}>
       <Card variant="elevated" style={styles.list}>
         {activities.map((item, index) => (
           <View
@@ -34,15 +29,13 @@ export function AdminActivityFeed({ activities, title }: Props) {
               },
             ]}>
             <View style={[styles.icon, { backgroundColor: primaryAlpha(scheme, 12) }]}>
-              <SymbolView
-                name={
-                  {
-                    ios: item.type === 'payment' ? 'arrow.down.circle.fill' : 'arrow.up.circle.fill',
-                    android: 'payments',
-                    web: 'payments',
-                  } as never
-                }
-                tintColor={colors.primary}
+              <PlatformIcon
+                name={{
+                  ios: item.type === 'payment' ? 'arrow.down.circle.fill' : 'arrow.up.circle.fill',
+                  android: 'payments',
+                  web: 'payments',
+                }}
+                color={colors.primary}
                 size={18}
               />
             </View>
@@ -55,13 +48,12 @@ export function AdminActivityFeed({ activities, title }: Props) {
           </View>
         ))}
       </Card>
-    </View>
+    </Section>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: spacing.md },
-  title: { marginBottom: spacing.sm },
   list: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   row: {
     flexDirection: 'row',

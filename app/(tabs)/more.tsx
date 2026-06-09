@@ -13,7 +13,7 @@ export default function AdminMoreScreen() {
   const { planName } = usePlan();
 
   return (
-    <Screen tabBarInset contentStyle={styles.content}>
+    <Screen safeArea={false} tabBarInset contentStyle={styles.content}>
       <Text variant="headingSmall" style={styles.section}>
         {t('admin.moreOperations')}
       </Text>
@@ -45,6 +45,11 @@ export default function AdminMoreScreen() {
         {t('admin.moreAccount')}
       </Text>
       <Card variant="standard" style={styles.card}>
+        <ProfileSettingsRow
+          icon={{ ios: 'bubble.left.and.bubble.right.fill', android: 'forum', web: 'forum' }}
+          label={t('nav.messages')}
+          onPress={() => router.push('/(tabs)/messages')}
+        />
         <ProfileSettingsRow
           icon={{ ios: 'person.circle.fill', android: 'person', web: 'person' }}
           label={t('nav.profile')}

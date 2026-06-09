@@ -1,5 +1,4 @@
-import { frequencyLabel } from './group-frequency';
-import type { GroupFrequency } from './types';
+export { poolSummary } from './admin-fee';
 
 const INVITE_CODE = /^[A-Z2-9]{6}$/;
 
@@ -46,18 +45,3 @@ export function membersStillNeeded(memberCount: number, maxMembers: number): num
   return Math.max(0, maxMembers - memberCount);
 }
 
-export function poolSummary(
-  contributionAmount: number,
-  maxMembers: number,
-  frequency: GroupFrequency,
-  adminFeePercent: number
-): string {
-  const gross = contributionAmount * maxMembers;
-  const fee = Math.round((gross * adminFeePercent) / 100);
-  const net = gross - fee;
-  return `${formatNairaShort(contributionAmount)} × ${maxMembers} members · ${frequencyLabel(frequency, { lowercase: true })} · pool ${formatNairaShort(net)}${fee > 0 ? ` (after ${adminFeePercent}% fee)` : ''}`;
-}
-
-function formatNairaShort(amount: number): string {
-  return `₦${amount.toLocaleString('en-NG', { maximumFractionDigits: 0 })}`;
-}

@@ -1,7 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
-import { InitialsAvatar } from '@/components/admin/InitialsAvatar';
+import { Avatar } from '@/components/Avatar';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { Badge, Card, Text } from '@/components/ui';
@@ -58,10 +58,9 @@ export default function AdminPayoutsScreen() {
     );
   }
 
-  const scopedName = groupId ? items[0]?.groupName : undefined;
-
   return (
     <Screen
+      safeArea={false}
       tabBarInset
       refreshing={refreshing}
       onRefresh={async () => {
@@ -70,10 +69,6 @@ export default function AdminPayoutsScreen() {
         setRefreshing(false);
       }}
       contentStyle={styles.content}>
-      <Text variant="bodyMedium" color="secondary" style={styles.intro}>
-        {scopedName ?? t('admin.payoutsIntro')}
-      </Text>
-
       {items.length ? (
         <Card variant="elevated" style={styles.summary}>
           <View style={styles.summaryCell}>
@@ -107,13 +102,14 @@ export default function AdminPayoutsScreen() {
             <Card variant="elevated" style={styles.card}>
               <View style={styles.header}>
                 <View style={styles.recipientRow}>
-                  <InitialsAvatar name={item.recipientName} size={44} />
+                  <Avatar name={item.recipientName} uri={item.recipientAvatarUrl} size={44} />
                   <View style={styles.recipientCopy}>
                     <Text variant="bodyLarge" style={styles.recipient} numberOfLines={1}>
                       {item.recipientName}
                     </Text>
                     <Text variant="caption" color="secondary" numberOfLines={1}>
                       {item.groupName} · {t('admin.cycleLabel', { n: item.cycleNumber })}
+                      {item.isLastCycle ? ' · Final' : ''}
                     </Text>
                   </View>
                 </View>
@@ -149,7 +145,6 @@ export default function AdminPayoutsScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { paddingTop: spacing.sm, paddingBottom: spacing.xl },
-  intro: { marginBottom: spacing.md, lineHeight: 22 },
   summary: {
     flexDirection: 'row',
     alignItems: 'center',

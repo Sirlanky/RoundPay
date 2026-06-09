@@ -43,10 +43,10 @@ function displayStatus(
   if (cycle) {
     if (cycle.status === 'paid_out' || member?.has_collected) return 'Completed';
     if (isCurrent) {
-      if (cycle.status === 'completed') return 'Ready for payout';
+      if (cycle.status === 'completed') return 'Pending';
       return 'Current round';
     }
-    if (cycle.status === 'completed') return 'Awaiting payout';
+    if (cycle.status === 'completed') return 'Pending';
     return 'Scheduled';
   }
 

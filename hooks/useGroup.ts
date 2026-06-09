@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { subscribePostgresChannel, unsubscribePostgresChannel, useRealtimeHandler } from '@/lib/supabase-realtime';
 import { supabase } from '@/lib/supabase';
 import type { AjoGroup, Cycle, GroupMember } from '@/lib/types';
 
@@ -13,7 +14,13 @@ export function useGroup(groupId: string | undefined) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchGroup = useCallback(async () => {
-    if (!groupId) return;
+    if (!groupId) {
+      setLoading(false);
+      setGroup(null);
+      setMembers([]);
+      setCurrentCycle(null);
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -54,20 +61,43 @@ export function useGroup(groupId: string | undefined) {
     fetchGroup();
   }, [fetchGroup]);
 
+  const onRealtimeChange = useRealtimeHandler(() => {
+    void fetchGroup();
+  });
+
   useEffect(() => {
     if (!groupId) return;
 
-    const channel = supabase
-      .channel(`group-${groupId}-${instanceId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'groups', filter: `id=eq.${groupId}` }, fetchGroup)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_members', filter: `group_id=eq.${groupId}` }, fetchGroup)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cycles', filter: `group_id=eq.${groupId}` }, fetchGroup)
-      .subscribe();
+    let channel: ReturnType<typeof subscribePostgresChannel> | null = null;
+    try {
+      channel = subscribePostgresChannel(`group-${groupId}-${instanceId}`, [
+        {
+          config: { event: '*', schema: 'public', table: 'groups', filter: `id=eq.${groupId}` },
+          callback: onRealtimeChange,
+        },
+        {
+          config: {
+            event: '*',
+            schema: 'public',
+            table: 'group_members',
+            filter: `group_id=eq.${groupId}`,
+          },
+          callback: onRealtimeChange,
+        },
+        {
+          config: { event: '*', schema: 'public', table: 'cycles', filter: `group_id=eq.${groupId}` },
+          callback: onRealtimeChange,
+        },
+      ]);
+    } catch (e) {
+      console.warn('[group] realtime subscribe failed:', e);
+      return;
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) unsubscribePostgresChannel(channel);
     };
-  }, [groupId, fetchGroup, instanceId]);
+  }, [groupId, instanceId, onRealtimeChange]);
 
   return { group, members, currentCycle, loading, error, refetch: fetchGroup };
 }

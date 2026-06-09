@@ -12,7 +12,6 @@ import {
   verifyEmailSignIn,
 } from '@/lib/email-sign-in';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { isExpoGo } from '@/lib/redirect';
 import { spacing } from '@/constants/theme';
 import { useThemeTokens } from '@/theme';
 
@@ -109,10 +108,6 @@ export default function VerifyOtpScreen() {
 
   return (
     <AuthShell title={t('auth.verifyTitle')} subtitle={t('auth.verifySubtitle', { email })} keyboard>
-      <Text style={[styles.help, { color: colors.textSecondary }]}>
-        {isExpoGo() ? t('auth.expoGoOpenWithHint') : t('auth.appLinkHint')}
-      </Text>
-      <Text style={[styles.help, { color: colors.textSecondary }]}>{t('auth.verifyHelp')}</Text>
       <Input
         label={t('auth.codeLabel')}
         placeholder={t('auth.codePlaceholder')}
@@ -138,13 +133,10 @@ export default function VerifyOtpScreen() {
         variant="secondary"
       />
       <Text style={[styles.backHint, { color: colors.textSecondary }]}>{t('auth.wrongEmailHint')}</Text>
-      <Text style={[styles.tip, { color: colors.textSecondary }]}>{t('auth.noEmailTip')}</Text>
     </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  help: { fontSize: 14, lineHeight: 20, marginBottom: spacing.md },
   backHint: { fontSize: 13, textAlign: 'center', marginTop: spacing.md, lineHeight: 18 },
-  tip: { fontSize: 12, lineHeight: 18, marginTop: spacing.lg, textAlign: 'center' },
 });

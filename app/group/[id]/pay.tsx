@@ -12,6 +12,7 @@ import { mapPaystackFunctionError } from '@/lib/auth-session';
 import { getContribution } from '@/lib/contributions';
 import { formatNaira } from '@/lib/format';
 import { createContributionPayment, isPaystackConfigured } from '@/lib/paystack';
+import { paystackCollectContributions } from '@/lib/paystack-mode';
 import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
 import { isProfileReadyForTransfers } from '@/lib/profile-setup';
 import { spacing, useThemeTokens } from '@/theme';
@@ -144,10 +145,28 @@ export default function PayScreen() {
   }
 
   const profileReady = isProfileReadyForTransfers(profile);
+  const cardPayEnabled = paystackCollectContributions && isPaystackConfigured();
+
+  if (!cardPayEnabled) {
+    return (
+      <Screen safeArea={false} contentStyle={styles.content}>
+        <Card variant="standard">
+          <Text variant="headingSmall">{groupName}</Text>
+          <Text variant="display" color="accent" style={{ marginTop: spacing.sm }}>
+            {amount != null ? formatNaira(amount) : '—'}
+          </Text>
+        </Card>
+        <Text variant="bodyMedium" color="secondary" style={styles.body}>
+          {t('payments.cardPayDisabled')}
+        </Text>
+        <Button title={t('common.ok')} onPress={() => router.back()} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen safeArea={false} contentStyle={styles.content}>
-      <ProfileSetupBanner profile={profile} />
+      <ProfileSetupBanner profile={profile} variant="persistent" />
       <Card variant="standard">
         <Text variant="caption" color="secondary">
           Group

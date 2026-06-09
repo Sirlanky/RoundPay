@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import {
   fetchNotifications,
   getUnreadNotificationCount,
@@ -6,10 +7,13 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '@/lib/in-app-notifications';
-import { supabase } from '@/lib/supabase';
+import { subscribePostgresChannel, unsubscribePostgresChannel, useRealtimeHandler } from '@/lib/supabase-realtime';
 import type { AppNotification } from '@/lib/types';
 
 export function useNotificationsState(userId: string | undefined) {
+  // Unique per hook instance so a second mount (e.g. a nested tabs layout)
+  // does not collide on a shared realtime channel topic.
+  const instanceId = useRef(Math.random().toString(36).slice(2)).current;
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -58,27 +62,47 @@ export function useNotificationsState(userId: string | undefined) {
     load();
   }, [load]);
 
+  const onRealtimeChange = useRealtimeHandler(() => {
+    void load();
+  });
+
   useEffect(() => {
     if (!userId || tableMissing) return;
 
-    const channel = supabase
-      .channel(`notifications-${userId}`)
-      .on(
-        'postgres_changes',
+    let channel: ReturnType<typeof subscribePostgresChannel> | null = null;
+    try {
+      channel = subscribePostgresChannel(`notifications-${userId}-${instanceId}`, [
         {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
+          config: {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          callback: onRealtimeChange,
         },
-        () => {
-          load();
-        }
-      )
-      .subscribe();
+      ]);
+    } catch (e) {
+      console.warn('[notifications] realtime subscribe failed:', e);
+      return;
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) unsubscribePostgresChannel(channel);
+    };
+  }, [userId, tableMissing, instanceId, onRealtimeChange]);
+
+  // Fallback so the bell badge and feed never go stale when realtime doesn't
+  // deliver: refetch when the app returns to the foreground and on a light poll.
+  useEffect(() => {
+    if (!userId || tableMissing) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void load();
+    });
+    const interval = setInterval(() => void load(), 15000);
+    return () => {
+      sub.remove();
+      clearInterval(interval);
     };
   }, [userId, tableMissing, load]);
 

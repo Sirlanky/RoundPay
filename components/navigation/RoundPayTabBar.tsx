@@ -7,6 +7,7 @@ import { TAB_BAR_FLOAT_GAP } from '@/components/navigation/tab-bar-layout';
 import { ACTIVE_TAB_CONFIG, isTabInConfig } from '@/components/navigation/tab-bar-config';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { useNotificationUnreadCount } from '@/contexts/NotificationsContext';
+import { useMessagesUnreadCount } from '@/contexts/MessagesContext';
 import { navigationRadius, spacing, typography, useThemeTokens } from '@/theme';
 
 export function RoundPayTabBar({ state, navigation, insets }: BottomTabBarProps) {
@@ -15,6 +16,7 @@ export function RoundPayTabBar({ state, navigation, insets }: BottomTabBarProps)
   const theme = useThemeTokens();
   const { colors, shadow } = theme;
   const unreadCount = useNotificationUnreadCount();
+  const messagesUnread = useMessagesUnreadCount();
   const onHeightChange = useContext(BottomTabBarHeightCallbackContext);
 
   const bottomInset = insets.bottom;
@@ -51,7 +53,11 @@ export function RoundPayTabBar({ state, navigation, insets }: BottomTabBarProps)
           const isFocused = route.key === focusedKey;
           const icon = isFocused && config.iconFocused ? config.iconFocused : config.icon;
           const badge =
-            route.name === 'notifications' && unreadCount > 0 ? unreadCount : undefined;
+            route.name === 'notifications' && unreadCount > 0
+              ? unreadCount
+              : route.name === 'messages' && messagesUnread > 0
+                ? messagesUnread
+                : undefined;
           const iconColor = isFocused ? colors.textInverse : colors.tabIconDefault;
           const labelColor = isFocused ? colors.textInverse : colors.tabIconDefault;
 

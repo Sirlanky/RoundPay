@@ -10,6 +10,7 @@ import { ijc } from './ijc';
 import { kr } from './kr';
 import { pcm } from './pcm';
 import type { TranslationKey } from './keys';
+import { createPluralFn, type PluralFn } from './plural';
 import { tiv } from './tiv';
 import { yo } from './yo';
 
@@ -42,6 +43,16 @@ export function translate(
   }
 
   return text;
+}
+
+export function translatePlural(
+  language: AppLanguage,
+  count: number,
+  oneKey: TranslationKey,
+  otherKey: TranslationKey,
+  vars?: Record<string, string | number>
+): string {
+  return createPluralFn(language)(count, oneKey, otherKey, vars);
 }
 
 export function translateAccountMode(language: AppLanguage, mode: string): string {

@@ -1,5 +1,5 @@
-import { SymbolView } from 'expo-symbols';
 import { StyleSheet, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import { PlatformIcon } from '@/components/navigation/PlatformIcon';
 import { useThemeTokens } from '@/theme';
 import { Text } from './Text';
 
@@ -41,9 +41,9 @@ export function Input({
           },
         ]}>
         {isSearch ? (
-          <SymbolView
-            name={{ ios: 'magnifyingglass', android: 'search', web: 'search' } as never}
-            tintColor={colors.textMuted}
+          <PlatformIcon
+            name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
+            color={colors.textMuted}
             size={18}
           />
         ) : null}

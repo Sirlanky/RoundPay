@@ -33,7 +33,7 @@ export default function TransparencyScreen() {
   }
 
   return (
-    <Screen tabBarInset refreshing={refreshing} onRefresh={onRefresh} contentStyle={styles.content}>
+    <Screen safeArea={false} tabBarInset refreshing={refreshing} onRefresh={onRefresh} contentStyle={styles.content}>
       <Text variant="display" style={styles.title}>
         {t('admin.transparencyTitle')}
       </Text>

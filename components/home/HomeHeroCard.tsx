@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Card, StatusBadge, Text } from '@/components/ui';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { formatNaira, frequencyLabel } from '@/lib/format';
 import type { HomeDashboardData } from '@/lib/home-dashboard';
 import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function HomeHeroCard({ data, onPress }: Props) {
+  const { t, tp } = useTranslation();
   const { colors, scheme, radius } = useThemeTokens();
   const { primaryGroup, memberCount, totalPot, paidCount, contributions, isOverdue } = data;
 
@@ -41,8 +43,12 @@ export function HomeHeroCard({ data, onPress }: Props) {
           {formatNaira(primaryGroup.contribution_amount)}
         </Text>
         <Text variant="bodySmall" color="secondary" style={styles.frequency}>
-          {frequencyLabel(primaryGroup.frequency)} · {memberCount}/{primaryGroup.max_members} members ·{' '}
-          {roundLabel}
+          {frequencyLabel(primaryGroup.frequency)} ·{' '}
+          {tp(primaryGroup.max_members, 'plural.roster_one', 'plural.roster_other', {
+            current: memberCount,
+            max: primaryGroup.max_members,
+          })}{' '}
+          · {roundLabel}
         </Text>
 
         {totalPot != null ? (
@@ -75,7 +81,8 @@ export function HomeHeroCard({ data, onPress }: Props) {
 
         {isDraft ? (
           <Text variant="caption" color="secondary" style={styles.draftHint}>
-            {memberCount} of {primaryGroup.max_members} members joined · Tap for details
+            {t('group.draftJoinedLine_other', { current: memberCount, max: primaryGroup.max_members })} · Tap
+            for details
           </Text>
         ) : null}
       </Card>

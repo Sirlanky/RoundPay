@@ -122,7 +122,8 @@ export type NotificationType =
   | 'member_joined'
   | 'group_joined'
   | 'payment_confirmed'
-  | 'payment_received';
+  | 'payment_received'
+  | 'direct_message';
 
 export interface AppNotification {
   id: string;

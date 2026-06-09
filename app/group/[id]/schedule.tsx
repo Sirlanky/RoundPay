@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { frequencyLabel } from '@/lib/format';
 import type { MemberWithProfile } from '@/lib/members';
 import {
@@ -20,6 +21,7 @@ type CycleWithRecipient = Cycle & { recipient?: Profile | null };
 export default function PayoutScheduleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const { tp } = useTranslation();
   const { group, members, loading, error } = useGroup(id);
   const [cycles, setCycles] = useState<CycleWithRecipient[]>([]);
   const [cyclesLoading, setCyclesLoading] = useState(true);
@@ -77,7 +79,7 @@ export default function PayoutScheduleScreen() {
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         {isDraft
           ? 'Each row is a collection round. Dates are added when the group starts.'
-          : `${frequencyLabel(group.frequency)} rounds · ${members.length} members · recorded dates from your group, future rounds estimated from the same schedule`}
+          : `${frequencyLabel(group.frequency)} rounds · ${tp(members.length, 'plural.member_one', 'plural.member_other', { count: members.length })} · recorded dates from your group, future rounds estimated from the same schedule`}
       </Text>
 
       {schedule.length === 0 ? (

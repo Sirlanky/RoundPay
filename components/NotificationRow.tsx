@@ -16,6 +16,7 @@ const TYPE_ICONS: Record<
   group_joined: { ios: 'person.3.fill', android: 'group', web: 'group' },
   payment_confirmed: { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },
   payment_received: { ios: 'banknote.fill', android: 'payments', web: 'payments' },
+  direct_message: { ios: 'bubble.left.fill', android: 'chat', web: 'chat' },
 };
 
 interface Props {
@@ -41,7 +42,7 @@ export function NotificationRow({ notification, onPress }: Props) {
           },
         ]}>
         <View style={[styles.iconWrap, { backgroundColor: primaryAlpha(scheme, 16) }]}>
-          <SymbolView name={icon as never} tintColor={colors.primary} size={20} />
+          <SymbolView name={icon.ios as never} tintColor={colors.primary} size={20} />
         </View>
         <View style={styles.body}>
           <View style={styles.titleRow}>

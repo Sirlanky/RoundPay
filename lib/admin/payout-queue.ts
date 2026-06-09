@@ -1,4 +1,5 @@
 import { getAdminGroups } from '@/lib/admin/role';
+import { payoutFromContributions } from '@/lib/cycle-utils';
 import { memberDisplayName } from '@/lib/members';
 import { supabase } from '@/lib/supabase';
 
@@ -7,13 +8,15 @@ export interface PayoutQueueItem {
   groupId: string;
   groupName: string;
   cycleNumber: number;
+  memberCount: number;
+  isLastCycle: boolean;
   recipientName: string;
+  recipientAvatarUrl: string | null;
   amount: number;
   dueDate: string | null;
   cycleStatus: string;
   allPaid: boolean;
   paidCount: number;
-  memberCount: number;
 }
 
 export async function fetchPayoutQueue(
@@ -44,15 +47,27 @@ export async function fetchPayoutQueue(
 
     const { data: contribs } = await supabase
       .from('contributions')
-      .select('status')
+      .select('amount, status')
       .eq('cycle_id', cycle.id);
 
     const paidCount = (contribs ?? []).filter((c) => c.status === 'paid').length;
     const allPaid = (contribs ?? []).length > 0 && paidCount === contribs!.length;
     const memberCount = contribs?.length ?? group.max_members;
+    const isLastCycle = memberCount > 0 && cycle.cycle_number >= memberCount;
 
-    const recipient = cycle.recipient as { full_name?: string | null } | null;
+    const payout = payoutFromContributions({
+      contributions: (contribs ?? []) as Array<{ amount: number; status: string }>,
+      adminFeePercent: group.admin_fee_percent ?? 0,
+      recipientId: cycle.recipient_id,
+      adminId: group.admin_id,
+      estimateIfIncomplete: true,
+    });
+
+    const recipient = cycle.recipient as
+      | { full_name?: string | null; avatar_url?: string | null }
+      | null;
     let recipientName = recipient?.full_name?.trim() ?? 'Next collector';
+    let recipientAvatarUrl = recipient?.avatar_url?.trim() || null;
 
     if (cycle.recipient_id) {
       const { data: memberRow } = await supabase
@@ -61,7 +76,12 @@ export async function fetchPayoutQueue(
         .eq('group_id', cycle.group_id)
         .eq('user_id', cycle.recipient_id)
         .maybeSingle();
-      if (memberRow) recipientName = memberDisplayName(memberRow as never);
+      if (memberRow) {
+        recipientName = memberDisplayName(memberRow as never);
+        recipientAvatarUrl =
+          (memberRow as { profile?: { avatar_url?: string | null } | null }).profile?.avatar_url?.trim() ||
+          recipientAvatarUrl;
+      }
     }
 
     items.push({
@@ -69,13 +89,15 @@ export async function fetchPayoutQueue(
       groupId: cycle.group_id,
       groupName: group.name,
       cycleNumber: cycle.cycle_number,
+      memberCount,
+      isLastCycle,
       recipientName,
-      amount: group.contribution_amount * Math.max(memberCount, 1),
+      recipientAvatarUrl,
+      amount: payout.net,
       dueDate: cycle.due_date,
       cycleStatus: cycle.status,
       allPaid,
       paidCount,
-      memberCount,
     });
   }
 

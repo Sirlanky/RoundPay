@@ -9,6 +9,7 @@ import { Input } from '@/components/Input';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminMode } from '@/contexts/AdminModeContext';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { messageFromGroupError } from '@/lib/group-errors';
 import { alertProfileDatabaseFix, isProfileDatabaseFixError } from '@/lib/profile';
 import { poolSummary, validateCreateGroupInput } from '@/lib/group-validation';
@@ -20,6 +21,7 @@ import { spacing, useThemeTokens } from '@/theme';
 export default function CreateGroupScreen() {
   const { user, canSave, exitBuildMode, signInAsGuest } = useAuth();
   const { refreshAdminAccess } = useAdminMode();
+  const { tp } = useTranslation();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [maxMembers, setMaxMembers] = useState('10');
@@ -49,7 +51,15 @@ export default function CreateGroupScreen() {
           validation.data.contributionAmount,
           validation.data.maxMembers,
           frequency,
-          validation.data.adminFeePercent
+          validation.data.adminFeePercent,
+          {
+            adminParticipates,
+            memberWord: tp(
+              validation.data.maxMembers,
+              'plural.memberNoun_one',
+              'plural.memberNoun_other'
+            ),
+          }
         )
       : null;
 
@@ -175,7 +185,7 @@ export default function CreateGroupScreen() {
           placeholder="0"
         />
         <Text style={[styles.feeHint, { color: colors.textSecondary }]}>
-          Optional fee taken from the pool when a member collects. Use 0 for no fee.
+          Optional fee taken when a member collects. The admin is never charged on their own turn.
         </Text>
       </Card>
 

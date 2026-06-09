@@ -1,5 +1,5 @@
-import { SymbolView } from 'expo-symbols';
 import { StyleSheet, Text, View } from 'react-native';
+import { PlatformIcon } from '@/components/navigation/PlatformIcon';
 import { Card } from '@/components/ui';
 import { HomeSectionTitle } from './HomeSectionTitle';
 import { formatDate } from '@/lib/format';
@@ -27,15 +27,13 @@ export function HomeRecentActivity({ activities }: Props) {
               index < activities.length - 1 && { borderBottomColor: colors.border, borderBottomWidth: 1 },
             ]}>
             <View style={[styles.dot, { backgroundColor: primaryAlpha(scheme, 32) }]}>
-              <SymbolView
-                name={
-                  {
-                    ios: item.type === 'payment' ? 'arrow.down.circle.fill' : 'arrow.up.circle.fill',
-                    android: 'payments',
-                    web: 'payments',
-                  } as never
-                }
-                tintColor={colors.primary}
+              <PlatformIcon
+                name={{
+                  ios: item.type === 'payment' ? 'arrow.down.circle.fill' : 'arrow.up.circle.fill',
+                  android: 'payments',
+                  web: 'payments',
+                }}
+                color={colors.primary}
                 size={18}
               />
             </View>

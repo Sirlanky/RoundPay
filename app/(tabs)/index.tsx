@@ -2,7 +2,7 @@ import { useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useAdminMode } from '@/contexts/AdminModeContext';
-import { HomeManagingSection } from '@/components/home/HomeManagingSection';
+import { HomeAdminDashboardCard } from '@/components/home/HomeAdminDashboardCard';
 import {
   HomeGroupSwitcher,
   HomeHeader,
@@ -84,11 +84,11 @@ export default function HomeScreen() {
       refreshing={refreshing}
       onRefresh={onRefresh}
       contentStyle={styles.content}>
-      <HomeHeader profile={profile} user={user} variant={isEmptyHome ? 'welcome' : 'dashboard'} />
+      <HomeHeader profile={profile} user={user} />
 
       <ProfileSetupBanner profile={profile} />
 
-      {managesGroups && user?.id ? <HomeManagingSection userId={user.id} /> : null}
+      {managesGroups && user?.id ? <HomeAdminDashboardCard userId={user.id} /> : null}
 
       {loadError ? <Text style={[styles.error, { color: colors.error }]}>{loadError}</Text> : null}
 

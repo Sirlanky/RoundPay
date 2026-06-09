@@ -165,12 +165,13 @@ export default function PayoutHistoryScreen() {
                     {formatNaira(row.amount)}
                   </Text>
                   <Text variant="caption" color="secondary">
-                    {t('payouts.received', { date: formatDate(row.created_at) })}
+                    {row.status === 'completed'
+                      ? formatDate(row.created_at)
+                      : row.dueDate
+                        ? formatDate(row.dueDate)
+                        : '—'}
                   </Text>
                 </View>
-                <Text variant="caption" color="secondary" style={styles.tapHint}>
-                  {t('payouts.tapGroup')}
-                </Text>
               </Card>
             </Pressable>
           ))}
@@ -206,5 +207,4 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: spacing.sm,
   },
-  tapHint: { marginTop: spacing.sm },
 });

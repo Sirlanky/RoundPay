@@ -1,5 +1,6 @@
 export { ProfileAvatar } from './ProfileAvatar';
 export { ProfileHeaderCard } from './ProfileHeaderCard';
+export { ProfileHubCard } from './ProfileHubCard';
 export { ProfileSection } from './ProfileSection';
 export { ProfileSettingsRow } from './ProfileSettingsRow';
 export { ProfileEditSheet } from './ProfileEditSheet';

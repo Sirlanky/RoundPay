@@ -1,6 +1,6 @@
-import { useLocalSearchParams, useNavigation, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter, useFocusEffect, type Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { useLayoutEffect, useMemo, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { AdminKpiGrid } from '@/components/admin/AdminKpiGrid';
 import { GroupHealthBadge } from '@/components/admin/GroupHealthBadge';
@@ -16,6 +16,7 @@ import type { GroupHealth } from '@/lib/admin/admin-dashboard';
 import { isGroupAdmin } from '@/lib/admin/role';
 import { recordContributionPayment } from '@/lib/contributions';
 import { formatNaira } from '@/lib/format';
+import { fetchGroupHistory } from '@/lib/group-history';
 import { messageFromGroupError } from '@/lib/group-errors';
 import { advanceCycle } from '@/lib/groups';
 import { memberDisplayName, type MemberWithProfile } from '@/lib/members';
@@ -69,6 +70,16 @@ export default function GroupAdminScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [feesEarned, setFeesEarned] = useState<number | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!groupId) return;
+      void fetchGroupHistory(groupId)
+        .then((h) => setFeesEarned(h.totalFees))
+        .catch(() => setFeesEarned(null));
+    }, [groupId])
+  );
 
   const memberByUserId = useMemo(() => {
     const map = new Map<string, MemberWithProfile>();
@@ -247,6 +258,17 @@ export default function GroupAdminScreen() {
         ]}
       />
 
+      {group.admin_fee_percent > 0 && feesEarned !== null ? (
+        <Card variant="standard" style={styles.feeCard}>
+          <Text variant="caption" color="secondary">
+            Admin fees
+          </Text>
+          <Text variant="headingSmall" color="success" style={styles.feeAmount}>
+            {formatNaira(feesEarned)}
+          </Text>
+        </Card>
+      ) : null}
+
       {isDraft ? (
         <Card variant="standard" style={styles.draftCard}>
           <Text variant="bodyLarge" style={styles.draftTitle}>
@@ -324,6 +346,8 @@ const styles = StyleSheet.create({
   },
   title: { flex: 1, fontWeight: '800' },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  feeCard: { marginTop: spacing.md, gap: 4 },
+  feeAmount: { fontWeight: '800' },
   draftCard: { marginTop: spacing.md },
   draftTitle: { fontWeight: '700', marginBottom: 4 },
   draftBody: { marginBottom: spacing.md, lineHeight: 20 },

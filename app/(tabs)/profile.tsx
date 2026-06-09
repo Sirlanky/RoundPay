@@ -10,6 +10,7 @@ import {
   ProfileAccountActions,
   ProfileEditSheet,
   ProfileHeaderCard,
+  ProfileHubCard,
   ProfileSection,
   ProfileSettingsRow,
   ReminderSettingsSheet,
@@ -379,6 +380,11 @@ export default function ProfileScreen() {
         onEdit={openEdit}
         onChangePhoto={handleChangePhoto}
         photoLoading={photoLoading}
+      />
+
+      <ProfileHubCard
+        onEdit={() => requireSave('edit your profile', openEdit)}
+        onMessages={() => requireSave('send messages', () => router.push('/(tabs)/messages'))}
       />
 
       <ProfileAccountActions />

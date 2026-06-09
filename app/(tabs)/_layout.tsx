@@ -36,12 +36,14 @@ function TabLayoutInner() {
       {/* One tab bar for everyone. Admin abilities surface contextually. */}
       <Tabs.Screen name="index" options={{ title: t('nav.home') }} />
       <Tabs.Screen name="groups" options={{ title: t('nav.groups') }} />
-      <Tabs.Screen name="contributions" options={{ title: t('nav.contributions') }} />
+      <Tabs.Screen name="messages" options={{ title: t('nav.messages') }} />
       <Tabs.Screen name="notifications" options={{ title: t('nav.alerts') }} />
       <Tabs.Screen name="profile" options={{ title: t('nav.profile') }} />
 
       {/* Non-tab routes, reachable via in-screen links. */}
+      <Tabs.Screen name="contributions" options={{ title: t('nav.contributions'), href: null }} />
       <Tabs.Screen name="ledger" options={{ title: t('nav.ledger'), href: null }} />
+      <Tabs.Screen name="admin-dashboard" options={{ title: t('admin.dashboardTitle'), href: null }} />
       <Tabs.Screen name="payouts" options={{ title: t('nav.payouts'), href: null }} />
       <Tabs.Screen name="more" options={{ title: t('nav.more'), href: null }} />
       <Tabs.Screen name="transparency" options={{ href: null }} />

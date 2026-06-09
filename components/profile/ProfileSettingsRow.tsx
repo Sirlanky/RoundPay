@@ -1,5 +1,5 @@
-import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { PlatformIcon } from '@/components/navigation/PlatformIcon';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { primaryAlpha, spacing, useThemeTokens } from '@/theme';
 
@@ -41,7 +41,7 @@ export function ProfileSettingsRow({
         { opacity: pressed && !disabled ? 0.88 : comingSoon ? 0.55 : 1 },
       ]}>
       <View style={[styles.iconWrap, { backgroundColor: primaryAlpha(scheme, 12) }]}>
-        <SymbolView name={icon as never} tintColor={tint} size={18} />
+        <PlatformIcon name={icon} size={18} color={tint} />
       </View>
       <View style={styles.body}>
         <Text style={[styles.label, { color: destructive ? colors.error : colors.textPrimary }]}>{label}</Text>
@@ -56,9 +56,9 @@ export function ProfileSettingsRow({
       ) : value ? (
         <Text style={[styles.value, { color: colors.textSecondary }]}>{value}</Text>
       ) : onPress ? (
-        <SymbolView
-          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' } as never}
-          tintColor={colors.textSecondary}
+        <PlatformIcon
+          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+          color={colors.textSecondary}
           size={14}
         />
       ) : null}

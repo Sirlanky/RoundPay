@@ -1,5 +1,5 @@
-import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { PlatformIcon } from '@/components/navigation/PlatformIcon';
 import { HomeSectionTitle } from './HomeSectionTitle';
 import { Text } from '@/components/ui';
 import { spacing, useThemeTokens } from '@/theme';
@@ -104,7 +104,7 @@ export function HomeQuickActions({
                 opacity: pressed ? 0.85 : 1,
               },
             ]}>
-            <SymbolView name={action.icon as never} tintColor={colors.primary} size={22} />
+            <PlatformIcon name={action.icon} color={colors.primary} size={22} />
             <Text variant="caption" style={{ fontWeight: '600' }}>
               {action.label}
             </Text>

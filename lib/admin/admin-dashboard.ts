@@ -1,4 +1,5 @@
 import { getAdminGroups } from '@/lib/admin/role';
+import { fetchGroupHistory } from '@/lib/group-history';
 import { memberDisplayName, type MemberWithProfile } from '@/lib/members';
 import { supabase } from '@/lib/supabase';
 import type { AjoGroup, Profile } from '@/lib/types';
@@ -14,6 +15,9 @@ export interface AdminGroupSummary {
   health: GroupHealth;
   nextPayoutName: string | null;
   dueDate: string | null;
+  totalCollected: number;
+  adminFeesEarned: number;
+  completedCycles: number;
 }
 
 export interface AdminDashboardStats {
@@ -38,6 +42,40 @@ function computeHealth(pending: number, isOverdue: boolean): GroupHealth {
   return 'healthy';
 }
 
+function clampMoney(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function clampCount(value: unknown): number {
+  const n = Math.floor(Number(value ?? 0));
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function normalizeStats(stats: AdminDashboardStats): AdminDashboardStats {
+  return {
+    totalGroups: clampCount(stats.totalGroups),
+    activeGroups: clampCount(stats.activeGroups),
+    totalMembers: clampCount(stats.totalMembers),
+    contributionsReceived: clampMoney(stats.contributionsReceived),
+    contributionsOutstanding: clampMoney(stats.contributionsOutstanding),
+    upcomingPayouts: clampCount(stats.upcomingPayouts),
+    pendingConfirmations: clampCount(stats.pendingConfirmations),
+  };
+}
+
+function normalizeGroupSummary(summary: AdminGroupSummary): AdminGroupSummary {
+  return {
+    ...summary,
+    memberCount: clampCount(summary.memberCount),
+    paidCount: clampCount(summary.paidCount),
+    pendingCount: clampCount(summary.pendingCount),
+    totalCollected: clampMoney(summary.totalCollected),
+    adminFeesEarned: clampMoney(summary.adminFeesEarned),
+    completedCycles: clampCount(summary.completedCycles),
+  };
+}
+
 async function fetchStatsFromRpc(userId: string): Promise<AdminDashboardStats | null> {
   const { data, error } = await supabase.rpc('get_admin_dashboard_stats', {
     p_admin_id: userId,
@@ -45,41 +83,72 @@ async function fetchStatsFromRpc(userId: string): Promise<AdminDashboardStats | 
 
   if (error || !data || typeof data !== 'object') return null;
 
-  const row = data as Record<string, number>;
-  return {
-    totalGroups: row.total_groups ?? 0,
-    activeGroups: row.active_groups ?? 0,
-    totalMembers: row.total_members ?? 0,
-    contributionsReceived: Number(row.contributions_received ?? 0),
-    contributionsOutstanding: Number(row.contributions_outstanding ?? 0),
-    upcomingPayouts: row.upcoming_payouts ?? 0,
-    pendingConfirmations: row.pending_confirmations ?? 0,
-  };
+  const row = data as Record<string, unknown>;
+  return normalizeStats({
+    totalGroups: clampCount(row.total_groups),
+    activeGroups: clampCount(row.active_groups),
+    totalMembers: clampCount(row.total_members),
+    contributionsReceived: clampMoney(row.contributions_received),
+    contributionsOutstanding: clampMoney(row.contributions_outstanding),
+    upcomingPayouts: clampCount(row.upcoming_payouts),
+    pendingConfirmations: clampCount(row.pending_confirmations),
+  });
 }
 
 async function buildGroupSummaries(groups: AjoGroup[]): Promise<AdminGroupSummary[]> {
   const summaries: AdminGroupSummary[] = [];
 
   for (const group of groups) {
-    if (group.status !== 'active' && group.status !== 'draft') continue;
+    if (group.status !== 'active' && group.status !== 'draft' && group.status !== 'completed') {
+      continue;
+    }
 
-    const [membersRes, cycleRes] = await Promise.all([
-      supabase
-        .from('group_members')
-        .select('*, profile:profiles(*)')
-        .eq('group_id', group.id),
+    const membersRes = await supabase
+      .from('group_members')
+      .select('*, profile:profiles(*)')
+      .eq('group_id', group.id);
+
+    const members = (membersRes.data ?? []) as MemberWithProfile[];
+
+    if (group.status === 'completed') {
+      let totalCollected = 0;
+      let adminFeesEarned = 0;
+      let completedCycles = 0;
+      try {
+        const history = await fetchGroupHistory(group.id);
+        totalCollected = history.totalPaidOut + history.totalFees;
+        adminFeesEarned = history.totalFees;
+        completedCycles = history.completedCycles;
+      } catch {
+        // keep zeros
+      }
+
+      summaries.push({
+        group,
+        memberCount: members.length,
+        paidCount: 0,
+        pendingCount: 0,
+        health: 'healthy',
+        nextPayoutName: null,
+        dueDate: null,
+        totalCollected,
+        adminFeesEarned,
+        completedCycles,
+      });
+      continue;
+    }
+
+    const cycleRes =
       group.status === 'active'
-        ? supabase
+        ? await supabase
             .from('cycles')
             .select('*, recipient:profiles(*)')
             .eq('group_id', group.id)
             .order('cycle_number', { ascending: false })
             .limit(1)
             .maybeSingle()
-        : Promise.resolve({ data: null }),
-    ]);
+        : { data: null };
 
-    const members = (membersRes.data ?? []) as MemberWithProfile[];
     const cycle = cycleRes.data as
       | ({ id: string; due_date: string | null; recipient?: Profile | null; recipient_id: string })
       | null;
@@ -120,8 +189,16 @@ async function buildGroupSummaries(groups: AjoGroup[]): Promise<AdminGroupSummar
       health: computeHealth(pendingCount, isOverdue),
       nextPayoutName,
       dueDate: cycle?.due_date ?? null,
+      totalCollected: 0,
+      adminFeesEarned: 0,
+      completedCycles: group.current_cycle ?? 0,
     });
   }
+
+  const statusOrder: Record<string, number> = { active: 0, draft: 1, completed: 2 };
+  summaries.sort(
+    (a, b) => (statusOrder[a.group.status] ?? 9) - (statusOrder[b.group.status] ?? 9)
+  );
 
   return summaries;
 }
@@ -191,18 +268,28 @@ export async function fetchAdminDashboard(userId: string): Promise<AdminDashboar
     fetchRecentAdminActivity(groups),
   ]);
 
-  const stats: AdminDashboardStats = rpcStats ?? {
-    totalGroups: groups.filter((g) => !g.archived_at).length,
-    activeGroups: groups.filter((g) => g.status === 'active').length,
-    totalMembers: groupSummaries.reduce((sum, g) => sum + g.memberCount, 0),
-    contributionsReceived: 0,
-    contributionsOutstanding: groupSummaries.reduce(
-      (sum, g) => sum + g.pendingCount * g.group.contribution_amount,
-      0
-    ),
-    upcomingPayouts: groupSummaries.filter((g) => g.group.status === 'active').length,
-    pendingConfirmations: groupSummaries.reduce((sum, g) => sum + g.pendingCount, 0),
-  };
+  const stats = normalizeStats(
+    rpcStats ?? {
+      totalGroups: groups.filter((g) => !g.archived_at).length,
+      activeGroups: groups.filter((g) => g.status === 'active').length,
+      totalMembers: groupSummaries.reduce((sum, g) => sum + g.memberCount, 0),
+      contributionsReceived: groupSummaries.reduce((sum, g) => {
+        if (g.group.status === 'completed') return sum + g.totalCollected;
+        if (g.group.status === 'active') return sum + g.paidCount * g.group.contribution_amount;
+        return sum;
+      }, 0),
+      contributionsOutstanding: groupSummaries.reduce(
+        (sum, g) => sum + g.pendingCount * g.group.contribution_amount,
+        0
+      ),
+      upcomingPayouts: groupSummaries.filter((g) => g.group.status === 'active').length,
+      pendingConfirmations: groupSummaries.reduce((sum, g) => sum + g.pendingCount, 0),
+    }
+  );
 
-  return { stats, groups: groupSummaries, recentActivity };
+  return {
+    stats,
+    groups: groupSummaries.map(normalizeGroupSummary),
+    recentActivity,
+  };
 }
