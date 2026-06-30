@@ -9,13 +9,16 @@ interface Props {
   title?: string;
   subtitle?: string;
   keyboard?: boolean;
+  footer?: ReactNode;
 }
 
-export function AuthShell({ children, title, subtitle, keyboard }: Props) {
+export function AuthShell({ children, title, subtitle, keyboard, footer }: Props) {
   const { colors, spacing, radius, scheme, shadow } = useThemeTokens();
 
   return (
-    <Screen keyboard={keyboard} contentStyle={styles.content}>
+    <Screen
+      keyboard={keyboard}
+      contentStyle={footer ? [styles.content, styles.contentWithFooter] : styles.content}>
       <View style={styles.brandBlock}>
         <View
           style={[
@@ -65,12 +68,20 @@ export function AuthShell({ children, title, subtitle, keyboard }: Props) {
         ]}>
         {children}
       </View>
+      {footer ? <View style={styles.footer}>{footer}</View> : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.md },
+  contentWithFooter: { flexGrow: 1 },
+  footer: {
+    marginTop: 'auto',
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+    alignItems: 'center',
+  },
   brandBlock: { alignItems: 'center', marginBottom: spacing.lg },
   logoBadge: {
     width: 64,

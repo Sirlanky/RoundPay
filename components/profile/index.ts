@@ -1,6 +1,10 @@
 export { ProfileAvatar } from './ProfileAvatar';
 export { ProfileHeaderCard } from './ProfileHeaderCard';
+export { ProfileHero } from './ProfileHero';
 export { ProfileHubCard } from './ProfileHubCard';
+export { ProfileQuickActions } from './ProfileQuickActions';
+export { ProfileSettingsMenu } from './ProfileSettingsMenu';
+export { ProfileSheets } from './ProfileSheets';
 export { ProfileSection } from './ProfileSection';
 export { ProfileSettingsRow } from './ProfileSettingsRow';
 export { ProfileEditSheet } from './ProfileEditSheet';
@@ -11,5 +15,6 @@ export { ReminderSettingsSheet } from './ReminderSettingsSheet';
 export { ReminderTimePickerSheet } from './ReminderTimePickerSheet';
 export { AppLockSheet } from './AppLockSheet';
 export { TransactionPinSheet } from './TransactionPinSheet';
+export { AccountPasswordSheet } from './AccountPasswordSheet';
 export { SignInSecuritySheet } from './SignInSecuritySheet';
 export { ActiveDevicesSheet } from './ActiveDevicesSheet';

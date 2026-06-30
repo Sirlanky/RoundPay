@@ -17,6 +17,7 @@ export default function AuthLayout() {
           headerLeft: () => <HeaderBackButton fallbackHref="/(auth)/login" />,
         }}
       />
+      <Stack.Screen name="reset-password" options={{ headerShown: false }} />
     </Stack>
   );
 }

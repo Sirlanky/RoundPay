@@ -67,7 +67,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     async function bootstrap() {
-      const { data: { session: existing } } = await supabase.auth.getSession();
+      const sessionResult = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<Awaited<ReturnType<typeof supabase.auth.getSession>>>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null }, error: null }), 8000)
+        ),
+      ]);
+      const existing = sessionResult.data.session;
       if (cancelled) return;
 
       if (existing) {

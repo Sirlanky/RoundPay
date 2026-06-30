@@ -7,14 +7,17 @@ import { GroupJoinPreviewCard } from '@/components/GroupJoinPreviewCard';
 import { Input } from '@/components/Input';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { messageFromGroupError } from '@/lib/group-errors';
+import { promptIdentityRequired } from '@/lib/identity-gate';
 import { isValidInviteCode } from '@/lib/group-validation';
 import { joinGroup, previewGroupByInviteCode, type GroupJoinPreview } from '@/lib/groups';
 import { promptSaveAuth } from '@/lib/prompt-save-auth';
 import { spacing, useThemeTokens } from '@/theme';
 
 export default function JoinGroupScreen() {
-  const { user, exitBuildMode, signInAsGuest } = useAuth();
+  const { user, profile, exitBuildMode } = useAuth();
+  const { t } = useTranslation();
   const { code } = useLocalSearchParams<{ code?: string }>();
   const [inviteCode, setInviteCode] = useState(code?.toString().toUpperCase() ?? '');
   const [preview, setPreview] = useState<GroupJoinPreview | null>(null);
@@ -53,20 +56,12 @@ export default function JoinGroupScreen() {
           exitBuildMode();
           router.replace('/(auth)/login');
         },
-        onGuest: async () => {
-          setLoading(true);
-          try {
-            const guest = await signInAsGuest();
-            const group = await joinGroup(inviteCode.trim(), guest.id);
-            router.replace(`/group/${group.id}`);
-          } catch (e) {
-            Alert.alert('Could not join', messageFromGroupError(e));
-          }
-          setLoading(false);
-        },
+        onGuest: () => {},
+        showGuest: false,
       });
       return;
     }
+    if (!promptIdentityRequired(profile, router, t)) return;
     if (!isValidInviteCode(inviteCode)) {
       Alert.alert('Invalid code', 'Invite codes are 6 characters (letters and numbers).');
       return;

@@ -32,6 +32,13 @@ export default function GroupLayout() {
         }}
       />
       <Stack.Screen
+        name="[id]/history"
+        options={{
+          title: 'Circle History',
+          headerLeft: () => <HeaderBackButton label="Back" />,
+        }}
+      />
+      <Stack.Screen
         name="[id]/admin"
         options={{
           title: 'Group Admin',

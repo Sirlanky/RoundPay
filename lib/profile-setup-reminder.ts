@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = '@ajo/profile-setup-reminder-daily';
+const COMPLETE_KEY = '@ajo/profile-setup-reminder-complete-v1';
 const LEGACY_SNOOZE_KEY = '@ajo/profile-setup-reminder-snooze-until';
 
 /** Max reminder appearances per calendar day (device local time). */
@@ -20,12 +21,44 @@ interface DailyState {
   lastShownAt: number;
 }
 
+type CompleteMap = Record<string, true>;
+
 function todayKey(): string {
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+async function loadCompleteMap(): Promise<CompleteMap> {
+  const raw = await AsyncStorage.getItem(COMPLETE_KEY);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as CompleteMap;
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch {
+    // ignore corrupt storage
+  }
+  return {};
+}
+
+async function saveCompleteMap(map: CompleteMap): Promise<void> {
+  await AsyncStorage.setItem(COMPLETE_KEY, JSON.stringify(map));
+}
+
+/** True once this user finished profile setup — reminder never shows again for them. */
+export async function isProfileSetupReminderPermanentlyComplete(userId: string): Promise<boolean> {
+  const map = await loadCompleteMap();
+  return map[userId] === true;
+}
+
+/** Call when name, phone, and bank are all on file — stops future reminders for this user. */
+export async function markProfileSetupReminderPermanentlyComplete(userId: string): Promise<void> {
+  const map = await loadCompleteMap();
+  map[userId] = true;
+  await saveCompleteMap(map);
+  await clearProfileSetupReminderState();
 }
 
 async function loadState(): Promise<DailyState | null> {
@@ -51,7 +84,11 @@ async function saveState(state: DailyState): Promise<void> {
 }
 
 /** Use one of today's reminder slots and return whether the banner should show. */
-export async function tryConsumeProfileSetupReminderShow(): Promise<boolean> {
+export async function tryConsumeProfileSetupReminderShow(userId: string | undefined): Promise<boolean> {
+  if (!userId) return false;
+
+  if (await isProfileSetupReminderPermanentlyComplete(userId)) return false;
+
   await AsyncStorage.removeItem(LEGACY_SNOOZE_KEY);
 
   const today = todayKey();

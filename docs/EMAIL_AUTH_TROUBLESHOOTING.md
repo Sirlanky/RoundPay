@@ -31,7 +31,14 @@ Supabase’s default template often sends a **link**, not a code.
 <p>Or tap this link: <a href="{{ .ConfirmationURL }}">Sign in</a></p>
 ```
 
-4. **Save**
+4. **Authentication** → **Email Templates** → **Reset password** — include the code (required in Expo Go; links often fail in Gmail’s browser):
+
+```html
+<p>Your reset code: <strong>{{ .Token }}</strong></p>
+<p>Enter this code in the app on the reset password screen.</p>
+```
+
+5. **Save**
 
 Without `{{ .Token }}`, you may only get a link — not a 6-digit code.
 

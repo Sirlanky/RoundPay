@@ -7,6 +7,38 @@ import { termiiVerifyOtp } from '../_shared/termii.ts';
 
 type Channel = 'phone' | 'email';
 
+async function verifyStoredOtp(params: {
+  channel: Channel;
+  stored: string;
+  code: string;
+  destination: string;
+}): Promise<boolean> {
+  const localPayload = decodeLocalOtpPayload(params.stored);
+  if (localPayload) {
+    return verifyLocalOtp({
+      stored: params.stored,
+      code: params.code,
+      expectedDestination: params.destination,
+      channel: params.channel,
+    });
+  }
+
+  if (params.channel === 'phone') {
+    try {
+      return await termiiVerifyOtp({ pin_id: params.stored, code: params.code });
+    } catch (e) {
+      console.error('Termii verify failed:', e);
+      return false;
+    }
+  }
+
+  return verifyEmailOtp({
+    stored: params.stored,
+    code: params.code,
+    expectedEmail: params.destination,
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -47,40 +79,25 @@ Deno.serve(async (req) => {
     let valid = false;
 
     if (channel === 'phone') {
-      const pin_id = profile.phone_otp_reference_id;
-      if (!pin_id) throw new Error('No OTP pending. Tap Send code first.');
+      const stored = profile.phone_otp_reference_id;
+      if (!stored) throw new Error('No OTP pending. Tap Send code first.');
       const destination = normalizeNgPhone(profile.phone ?? '');
-      const localPayload = decodeLocalOtpPayload(pin_id);
-      if (localPayload) {
-        valid = await verifyLocalOtp({
-          stored: pin_id,
-          code: code.trim(),
-          expectedDestination: destination,
-          channel: 'phone',
-        });
-      } else {
-        valid = await termiiVerifyOtp({ pin_id, code: code.trim() });
-      }
+      valid = await verifyStoredOtp({
+        channel: 'phone',
+        stored,
+        code: code.trim(),
+        destination,
+      });
     } else {
       const email = normalizeEmail(profile.email ?? user.email ?? '');
-      if (!profile.email_otp_reference_id) {
-        throw new Error('No OTP pending. Tap Send code first.');
-      }
-      const localPayload = decodeLocalOtpPayload(profile.email_otp_reference_id);
-      if (localPayload) {
-        valid = await verifyLocalOtp({
-          stored: profile.email_otp_reference_id,
-          code: code.trim(),
-          expectedDestination: email,
-          channel: 'email',
-        });
-      } else {
-        valid = await verifyEmailOtp({
-          stored: profile.email_otp_reference_id,
-          code: code.trim(),
-          expectedEmail: email,
-        });
-      }
+      const stored = profile.email_otp_reference_id;
+      if (!stored) throw new Error('No OTP pending. Tap Send code first.');
+      valid = await verifyStoredOtp({
+        channel: 'email',
+        stored,
+        code: code.trim(),
+        destination: email,
+      });
     }
 
     if (!valid) throw new Error('Invalid or expired code. Request a new OTP and try again.');

@@ -24,7 +24,15 @@ export function isPlaceholderVerified(profile: Profile | null | undefined): bool
 export function isOtpVerified(profile: Profile | null | undefined): boolean {
   return (
     profile?.identity_status === 'verified' &&
-    (profile?.identity_verification_method === 'otp' || profile?.identity_verification_method === 'dojah')
+    (profile?.identity_verification_method === 'otp' ||
+      profile?.identity_verification_method === 'dojah' ||
+      profile?.identity_verification_method === 'youverify')
+  );
+}
+
+export function isYouverifyVerified(profile: Profile | null | undefined): boolean {
+  return (
+    profile?.identity_status === 'verified' && profile?.identity_verification_method === 'youverify'
   );
 }
 

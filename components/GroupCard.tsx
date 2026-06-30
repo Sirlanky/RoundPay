@@ -2,7 +2,8 @@ import { Link } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { StatusBadge, Text } from '@/components/ui';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { formatNaira, frequencyLabel } from '@/lib/format';
+import { formatNaira } from '@/lib/format';
+import { collectionFrequencyLabel, payoutFrequencyLabel, scheduleFromGroup } from '@/lib/group-schedule';
 import type { AjoGroup } from '@/lib/types';
 import { spacing, useThemeTokens } from '@/theme';
 
@@ -14,20 +15,23 @@ interface Props {
 }
 
 export function GroupCard({ group, variant = 'default', compact = false, onNavigate }: Props) {
-  const { tp } = useTranslation();
+  const { tp, t } = useTranslation();
   const { colors, radius } = useThemeTokens();
   const isHistory = variant === 'history' || group.status === 'completed';
   const isDraft = group.status === 'draft';
 
+  const schedule = scheduleFromGroup(group);
+  const scheduleLabel = `${collectionFrequencyLabel(schedule, t)} · ${payoutFrequencyLabel(schedule.payoutFrequency, t)}`;
+
   const metaLine = isHistory
-    ? `${frequencyLabel(group.frequency)} · ${
+    ? `${scheduleLabel} · ${
         group.current_cycle > 0
           ? tp(group.current_cycle, 'group.cycleFinished_one', 'group.cycleFinished_other', {
               count: group.current_cycle,
             })
           : 'Finished'
       }`
-    : `${frequencyLabel(group.frequency)}${group.current_cycle > 0 ? ` · Cycle ${group.current_cycle}` : ''}`;
+    : `${scheduleLabel}${group.current_cycle > 0 ? ` · ${t('admin.cycleLabel', { n: group.current_cycle })}` : ''}`;
 
   return (
     <Link href={`/group/${group.id}`} asChild>

@@ -2,6 +2,7 @@ export { HomeHeader } from './HomeHeader';
 export { HomeGroupSwitcher } from './HomeGroupSwitcher';
 export { HomeNoGroupsEmpty, HomeNoActiveEmpty } from './HomeEmptyState';
 export { HomeHeroCard } from './HomeHeroCard';
+export { HomeCyclePotCard } from './HomeCyclePotCard';
 export { HomeNextPayoutCard } from './HomeNextPayoutCard';
 export { HomeStatusStrip } from './HomeStatusStrip';
 export { HomeQuickActions } from './HomeQuickActions';

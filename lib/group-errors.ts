@@ -3,6 +3,40 @@ export function messageFromGroupError(e: unknown): string {
   const err = e as { message?: string; code?: string };
   const msg = err.message ?? '';
 
+  if (
+    msg.includes('YOUVERIFY_NOT_CONFIGURED') ||
+    msg.includes('verify-nin') ||
+    msg.includes('YouVerify')
+  ) {
+    return 'NIN verification is not set up yet. Add YOUVERIFY_API_KEY to Supabase Edge Function secrets, deploy verify-nin, and run migration 038.';
+  }
+  if (msg.includes('SELFIE_PERMISSION_DENIED') || msg.includes('Selfie image is too large')) {
+    return msg;
+  }
+  if (msg.includes('You must consent to NIN verification') || msg.includes('Enter a valid 11-digit NIN')) {
+    return msg;
+  }
+  if (msg.includes('Selfie does not match') || msg.includes('NIN could not be verified')) {
+    return msg;
+  }
+  if (/does not match|Real NINs cannot be verified in YouVerify sandbox/i.test(msg)) {
+    return msg;
+  }
+  if (msg.includes('RESEND_RECIPIENT_RESTRICTED') || /only send testing emails|verify a domain at resend/i.test(msg)) {
+    return 'Resend is in test mode and can only email one address until your domain is verified. Tap Send code again — use the on-screen code, or verify roundpayajo.ng in Resend.';
+  }
+  if (msg.includes('IDENTITY_NOT_VERIFIED')) {
+    return 'Verify your identity in Profile before creating or joining a group.';
+  }
+  if (msg.includes('Payout order can only be changed while the group is in draft')) {
+    return 'Collection order can only be changed while the group is still in draft. After start, everyone must agree to any change.';
+  }
+  if (msg.includes('Invalid or expired code')) {
+    return 'That code is wrong or expired. Tap Send code again, then enter the new code shown on screen.';
+  }
+  if (/verification error|Termii verify OTP failed/i.test(msg)) {
+    return 'That code did not match. Tap Send code again and use the code shown on screen (not a text message).';
+  }
   if (msg.includes('OTP_PHONE_NOT_VERIFIED') || msg.includes('DOJAH_PHONE_NOT_VERIFIED')) {
     return 'Verify your phone number with the OTP code before completing verification.';
   }
@@ -12,13 +46,21 @@ export function messageFromGroupError(e: unknown): string {
   if (msg.includes('IDENTITY_PROFILE_EMAIL_REQUIRED')) {
     return 'Add your email in Profile before completing verification.';
   }
+  if (msg.includes('Enter a valid Nigerian phone number')) {
+    return msg;
+  }
+  if (/ApplicationSenderId not found|senderName|Termii send OTP failed/i.test(msg)) {
+    return 'SMS sender is not set up in Termii. Update TERMII_SENDER_ID in Supabase secrets to your approved sender name, or retry — a dev code may appear if SMS fails.';
+  }
   if (
     msg.includes('Termii is not configured') ||
     msg.includes('Resend is not configured') ||
     msg.includes('send-identity-otp') ||
-    msg.includes('verify-identity-otp')
+    msg.includes('verify-identity-otp') ||
+    msg.includes('Failed to send a request to the Edge Function') ||
+    msg.includes('Edge Function returned a non-2xx status code')
   ) {
-    return 'OTP is not set up yet. Add TERMII_API_KEY and RESEND_API_KEY to Supabase Edge Function secrets, deploy send-identity-otp and verify-identity-otp, then try again.';
+    return 'Phone/email OTP is not set up yet. Deploy send-identity-otp and verify-identity-otp, add TERMII_API_KEY (SMS) and RESEND secrets in Supabase, or use the dev code shown after Send code when SMS is not configured.';
   }
   if (msg.includes('IDENTITY_PROFILE_NAME_REQUIRED')) {
     return 'Add your first and last name in Profile before verifying.';

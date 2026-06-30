@@ -19,7 +19,7 @@ module.exports = {
       intentFilters: [
         {
           action: 'VIEW',
-          data: [{ scheme: 'ajoesusu' }],
+          data: [{ scheme: 'roundpayajo' }],
           category: ['BROWSABLE', 'DEFAULT'],
         },
       ],

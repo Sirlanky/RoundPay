@@ -18,9 +18,11 @@ interface Props {
   person: GroupMessagePerson;
   canMessage: boolean;
   onMessage: (userId: string) => void;
+  /** Inside a grouped card — no outer border or margin. */
+  embedded?: boolean;
 }
 
-export function GroupMemberMessageRow({ person, canMessage, onMessage }: Props) {
+export function GroupMemberMessageRow({ person, canMessage, onMessage, embedded }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
   const { colors, scheme, radius } = useThemeTokens();
@@ -29,7 +31,9 @@ export function GroupMemberMessageRow({ person, canMessage, onMessage }: Props) 
     <View
       style={[
         styles.row,
-        { backgroundColor: colors.surface, borderColor: colors.border },
+        embedded
+          ? styles.rowEmbedded
+          : [styles.rowCard, { backgroundColor: colors.surface, borderColor: colors.border }],
       ]}>
       <Pressable
         onPress={() => router.push(`/member/${person.userId}` as Href)}
@@ -52,6 +56,7 @@ export function GroupMemberMessageRow({ person, canMessage, onMessage }: Props) 
       {canMessage && !person.isYou ? (
         <Pressable
           onPress={() => onMessage(person.userId)}
+          hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('messages.sendTo', { name: person.name })}
           style={({ pressed }) => [
@@ -65,11 +70,11 @@ export function GroupMemberMessageRow({ person, canMessage, onMessage }: Props) 
           ]}>
           <PlatformIcon
             name={{
-              ios: 'bubble.left.and.bubble.right.fill',
-              android: 'forum',
-              web: 'forum',
+              ios: 'bubble.left.fill',
+              android: 'chat',
+              web: 'chat',
             }}
-            size={18}
+            size={20}
             color={colors.primary}
           />
         </Pressable>
@@ -84,6 +89,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     padding: spacing.md,
+  },
+  rowEmbedded: {
+    marginBottom: 0,
+    borderWidth: 0,
+    borderRadius: 0,
+  },
+  rowCard: {
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     marginBottom: spacing.sm,
@@ -99,6 +111,7 @@ const styles = StyleSheet.create({
   messageBtn: {
     width: 40,
     height: 40,
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,

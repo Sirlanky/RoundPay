@@ -23,8 +23,10 @@ export async function resolveSignInEmail(explicit?: string | null): Promise<stri
   return getPendingSignInEmail();
 }
 
+export type EmailAuthMode = 'login' | 'signup';
+
 /** Send sign-in / link-email message. Links email onto anonymous sessions when logged in as guest. */
-export async function requestEmailSignIn(email: string) {
+export async function requestEmailSignIn(email: string, mode: EmailAuthMode = 'login') {
   const normalized = normalizeSignInEmail(email);
   if (!isValidSignInEmail(normalized)) {
     return { data: null, error: { message: 'Enter a valid email address.' } };
@@ -47,7 +49,7 @@ export async function requestEmailSignIn(email: string) {
     return { data: result.data, error: null };
   }
 
-  return sendOtpRaw(normalized);
+  return sendOtpRaw(normalized, { shouldCreateUser: mode === 'signup' });
 }
 
 export type VerifyEmailSignInResult = Awaited<ReturnType<typeof verifyOtpRaw>>;
@@ -81,6 +83,6 @@ export async function verifyEmailSignIn(email: string, token: string): Promise<V
   return result;
 }
 
-export async function resendEmailSignIn(email: string) {
-  return requestEmailSignIn(email);
+export async function resendEmailSignIn(email: string, mode: EmailAuthMode = 'login') {
+  return requestEmailSignIn(email, mode);
 }

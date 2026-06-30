@@ -1,13 +1,16 @@
 import { Stack } from 'expo-router';
 import { HeaderBackButton } from '@/components/HeaderBackButton';
 import { useColorScheme } from '@/components/useColorScheme';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { formScreenOptions, stackScreenOptions } from '@/lib/stack-screen-options';
 
 export default function ProfileStackLayout() {
   const scheme = useColorScheme() ?? 'light';
+  const { t } = useTranslation();
 
   return (
     <Stack screenOptions={stackScreenOptions(scheme)}>
+      <Stack.Screen name="settings" options={{ title: t('profile.settingsTitle') }} />
       <Stack.Screen name="bank" options={{ title: 'Bank Account' }} />
       <Stack.Screen name="payouts" options={{ title: 'Payout History' }} />
       <Stack.Screen

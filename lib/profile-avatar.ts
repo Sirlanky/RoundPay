@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { ensureProfile } from './profile';
 import { supabase } from './supabase';
 
 export const AVATAR_BUCKET = 'avatars';
@@ -23,6 +24,12 @@ export function isAvatarColumnMissing(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const e = error as { message?: string; code?: string };
   return e.code === 'PGRST204' || (e.message?.includes('avatar_url') ?? false);
+}
+
+export function isAvatarStorageRlsError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const msg = (error as { message?: string }).message ?? '';
+  return /row-level security|violates row-level security policy/i.test(msg);
 }
 
 async function ensureMediaPermission(kind: 'library' | 'camera'): Promise<boolean> {
@@ -72,6 +79,14 @@ export async function uploadProfileAvatar(
   userId: string,
   asset: ImagePicker.ImagePickerAsset
 ): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || user.id !== userId) {
+    throw new Error('Sign in again, then try updating your photo.');
+  }
+  await ensureProfile(user);
+
   const mimeType = asset.mimeType ?? 'image/jpeg';
   const path = avatarStoragePath(userId, mimeType);
   const bytes = await uriToArrayBuffer(asset.uri);

@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
         email: profile?.email ?? `${user.id}@ajo.app`,
         amount: contribution.amount * 100,
         reference,
-        callback_url: 'ajoesusu://payment-callback',
+        callback_url: 'roundpayajo://payment-callback',
         metadata: {
           contribution_id,
           user_id: user.id,

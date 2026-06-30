@@ -17,7 +17,8 @@ export function useContributions(cycleId: string | undefined) {
       .from('contributions')
       .select('*')
       .eq('cycle_id', cycleId)
-      .order('created_at');
+      .order('user_id')
+      .order('installment_number');
     setContributions((data ?? []) as Contribution[]);
     setLoading(false);
   }, [cycleId]);

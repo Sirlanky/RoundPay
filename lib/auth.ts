@@ -27,27 +27,45 @@ function parseUrlParams(url: string): URLSearchParams {
   return params;
 }
 
+export type SessionFromUrlResult = {
+  ok: boolean;
+  error?: string;
+  /** True when the URL is from a password-reset email — show the new-password screen. */
+  recovery?: boolean;
+};
+
+function resolveOtpType(type: string): 'email' | 'email_change' | 'magiclink' | 'recovery' {
+  if (type === 'email_change') return 'email_change';
+  if (type === 'magiclink') return 'magiclink';
+  if (type === 'recovery') return 'recovery';
+  return 'email';
+}
+
 /** Parse Supabase magic-link / OAuth redirect and create a session. */
-export async function createSessionFromUrl(url: string): Promise<{ ok: boolean; error?: string }> {
-  async function finishOk(): Promise<{ ok: boolean; error?: string }> {
-    await clearPendingSignInEmail();
+export async function createSessionFromUrl(url: string): Promise<SessionFromUrlResult> {
+  async function finishOk(recovery: boolean): Promise<SessionFromUrlResult> {
+    if (!recovery) {
+      await clearPendingSignInEmail();
+    }
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (user) await ensureProfile(user);
-    return { ok: true };
+    if (user && !recovery) await ensureProfile(user);
+    return { ok: true, recovery };
   }
 
   try {
     const parsed = Linking.parse(url);
     const query = parsed.queryParams ?? {};
     const merged = parseUrlParams(url);
+    const type = firstParam(query.type as string | string[] | undefined) ?? merged.get('type') ?? 'email';
+    const recovery = type === 'recovery';
 
     const code = firstParam(query.code as string | string[] | undefined) ?? merged.get('code') ?? undefined;
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) return { ok: false, error: error.message };
-      return finishOk();
+      return finishOk(recovery);
     }
 
     const access_token =
@@ -58,17 +76,13 @@ export async function createSessionFromUrl(url: string): Promise<{ ok: boolean; 
     if (access_token && refresh_token) {
       const { error } = await supabase.auth.setSession({ access_token, refresh_token });
       if (error) return { ok: false, error: error.message };
-      return finishOk();
+      return finishOk(recovery);
     }
 
     const token_hash =
       firstParam(query.token_hash as string | string[] | undefined) ?? merged.get('token_hash') ?? undefined;
-    const type = firstParam(query.type as string | string[] | undefined) ?? merged.get('type') ?? 'email';
     if (token_hash) {
-      const otpType = (type === 'email_change' ? 'email_change' : type === 'magiclink' ? 'magiclink' : 'email') as
-        | 'email'
-        | 'email_change'
-        | 'magiclink';
+      const otpType = resolveOtpType(type);
       let { error } = await supabase.auth.verifyOtp({
         token_hash,
         type: otpType,
@@ -77,7 +91,7 @@ export async function createSessionFromUrl(url: string): Promise<{ ok: boolean; 
         ({ error } = await supabase.auth.verifyOtp({ token_hash, type: 'magiclink' }));
       }
       if (error) return { ok: false, error: error.message };
-      return finishOk();
+      return finishOk(otpType === 'recovery');
     }
 
     return { ok: false, error: 'No sign-in tokens in this link. Use the 6-digit code on the Verify screen instead.' };
@@ -90,11 +104,14 @@ export async function createSessionFromUrl(url: string): Promise<{ ok: boolean; 
  * Request sign-in email. Includes redirect for magic-link sign-in.
  * A 6-digit code appears only if the Supabase Magic Link template contains {{ .Token }}.
  */
-export async function sendEmailOtp(email: string) {
+export async function sendEmailOtp(
+  email: string,
+  options?: { shouldCreateUser?: boolean }
+) {
   return supabase.auth.signInWithOtp({
     email: email.trim(),
     options: {
-      shouldCreateUser: true,
+      shouldCreateUser: options?.shouldCreateUser ?? true,
       emailRedirectTo: getAuthRedirectUrl(),
     },
   });

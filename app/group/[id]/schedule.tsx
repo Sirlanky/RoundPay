@@ -11,6 +11,7 @@ import {
   groupScheduleByMonth,
   scheduleDayParts,
 } from '@/lib/payout-schedule';
+import { fetchPayoutSlots } from '@/lib/payout-order';
 import { supabase } from '@/lib/supabase';
 import type { AjoGroup, Cycle, Profile } from '@/lib/types';
 import { useGroup } from '@/hooks/useGroup';
@@ -21,21 +22,28 @@ type CycleWithRecipient = Cycle & { recipient?: Profile | null };
 export default function PayoutScheduleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { tp } = useTranslation();
+  const { tp, t } = useTranslation();
   const { group, members, loading, error } = useGroup(id);
   const [cycles, setCycles] = useState<CycleWithRecipient[]>([]);
   const [cyclesLoading, setCyclesLoading] = useState(true);
+  const [slots, setSlots] = useState<{ position: number; userId: string; collectorName: string }[]>([]);
   const { colors, scheme } = useThemeTokens();
 
   const loadCycles = useCallback(async () => {
     if (!id) return;
     setCyclesLoading(true);
-    const { data } = await supabase
-      .from('cycles')
-      .select('*, recipient:profiles(*)')
-      .eq('group_id', id)
-      .order('cycle_number');
+    const [{ data }, payoutSlots] = await Promise.all([
+      supabase.from('cycles').select('*, recipient:profiles(*)').eq('group_id', id).order('cycle_number'),
+      fetchPayoutSlots(id).catch(() => []),
+    ]);
     setCycles((data ?? []) as CycleWithRecipient[]);
+    setSlots(
+      payoutSlots.map((s) => ({
+        position: s.position,
+        userId: s.userId,
+        collectorName: s.memberName,
+      }))
+    );
     setCyclesLoading(false);
   }, [id]);
 
@@ -47,11 +55,12 @@ export default function PayoutScheduleScreen() {
     if (!group) return [];
     return buildPayoutSchedule(
       group as AjoGroup,
+      slots,
       members as MemberWithProfile[],
       cycles,
       user?.id
     );
-  }, [group, members, cycles, user?.id]);
+  }, [group, slots, members, cycles, user?.id]);
 
   const months = useMemo(() => groupScheduleByMonth(schedule), [schedule]);
 
@@ -75,18 +84,19 @@ export default function PayoutScheduleScreen() {
 
   return (
     <Screen safeArea={false} contentStyle={styles.content}>
-      <Text style={[styles.title, { color: colors.textPrimary }]}>Payout calendar</Text>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{t('schedule.title')}</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         {isDraft
-          ? 'Each row is a collection round. Dates are added when the group starts.'
-          : `${frequencyLabel(group.frequency)} rounds · ${tp(members.length, 'plural.member_one', 'plural.member_other', { count: members.length })} · recorded dates from your group, future rounds estimated from the same schedule`}
+          ? t('schedule.draftSubtitle')
+          : t('schedule.activeSubtitle', {
+              freq: frequencyLabel(group.frequency),
+              members: tp(members.length, 'plural.member_one', 'plural.member_other', { count: members.length }),
+            })}
       </Text>
 
       {schedule.length === 0 ? (
         <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            No members in the rotation yet.
-          </Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('schedule.empty')}</Text>
         </View>
       ) : (
         months.map((month) => (
@@ -101,8 +111,7 @@ export default function PayoutScheduleScreen() {
 
       {!isDraft && schedule.some((e) => e.dateSource === 'estimated') ? (
         <Text style={[styles.footnote, { color: colors.textSecondary }]}>
-          Estimated dates follow your {frequencyLabel(group.frequency).toLowerCase()} interval from
-          the first recorded round. Actual dates may shift when the admin advances cycles.
+          {t('schedule.footnote', { freq: frequencyLabel(group.frequency).toLowerCase() })}
         </Text>
       ) : null}
     </Screen>

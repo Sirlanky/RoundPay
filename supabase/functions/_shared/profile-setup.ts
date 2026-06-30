@@ -14,12 +14,18 @@ function splitFullName(fullName: string | null | undefined) {
   return { firstName: parts[0], lastName: parts[parts.length - 1] };
 }
 
+export function getProfileNameParts(profile: ProfileRow | null | undefined) {
+  const fromFull = splitFullName(profile?.full_name);
+  return {
+    firstName: profile?.first_name?.trim() || fromFull.firstName,
+    lastName: profile?.last_name?.trim() || fromFull.lastName,
+  };
+}
+
 export function isProfileReadyForTransfers(profile: ProfileRow | null | undefined): boolean {
   if (!profile) return false;
 
-  const fromFull = splitFullName(profile.full_name);
-  const firstName = profile.first_name?.trim() || fromFull.firstName;
-  const lastName = profile.last_name?.trim() || fromFull.lastName;
+  const { firstName, lastName } = getProfileNameParts(profile);
 
   if (!firstName || !lastName) return false;
   if (!profile.phone?.trim()) return false;

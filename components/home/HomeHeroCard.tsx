@@ -13,7 +13,7 @@ interface Props {
 export function HomeHeroCard({ data, onPress }: Props) {
   const { t, tp } = useTranslation();
   const { colors, scheme, radius } = useThemeTokens();
-  const { primaryGroup, memberCount, totalPot, paidCount, contributions, isOverdue } = data;
+  const { primaryGroup, memberCount, totalPot } = data;
 
   if (!primaryGroup) return null;
 
@@ -21,13 +21,10 @@ export function HomeHeroCard({ data, onPress }: Props) {
   const isActive = primaryGroup.status === 'active';
   const roundLabel =
     primaryGroup.current_cycle > 0
-      ? `Round ${primaryGroup.current_cycle}`
+      ? t('admin.cycleLabel', { n: primaryGroup.current_cycle })
       : isDraft
-        ? 'Not started yet'
-        : 'Not available yet';
-
-  const pendingCount = contributions.filter((c) => c.status === 'pending').length;
-  const progress = contributions.length > 0 ? paidCount / contributions.length : 0;
+        ? t('home.notStartedYet')
+        : t('home.notAvailableYet');
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.96 : 1 }]}>
@@ -51,10 +48,10 @@ export function HomeHeroCard({ data, onPress }: Props) {
           · {roundLabel}
         </Text>
 
-        {totalPot != null ? (
+        {totalPot != null && !isActive ? (
           <View style={[styles.potRow, { backgroundColor: primaryAlpha(scheme, 12), borderRadius: radius.md }]}>
             <Text variant="caption" color="secondary">
-              Total pot
+              {t('home.turnMoney')}
             </Text>
             <Text variant="headingSmall" color="accent">
               {formatNaira(totalPot)}
@@ -62,27 +59,9 @@ export function HomeHeroCard({ data, onPress }: Props) {
           </View>
         ) : null}
 
-        {isActive && contributions.length > 0 ? (
-          <View style={styles.progressWrap}>
-            <View style={[styles.barBg, { backgroundColor: colors.border }]}>
-              <View
-                style={[
-                  styles.barFill,
-                  { width: `${Math.min(progress * 100, 100)}%`, backgroundColor: colors.primary },
-                ]}
-              />
-            </View>
-            <Text variant="caption" color="secondary" style={styles.progressText}>
-              {paidCount} of {contributions.length} paid this round
-              {isOverdue && pendingCount > 0 ? ' · Overdue' : ''}
-            </Text>
-          </View>
-        ) : null}
-
         {isDraft ? (
           <Text variant="caption" color="secondary" style={styles.draftHint}>
-            {t('group.draftJoinedLine_other', { current: memberCount, max: primaryGroup.max_members })} · Tap
-            for details
+            Tap for details
           </Text>
         ) : null}
       </Card>

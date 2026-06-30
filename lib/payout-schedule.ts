@@ -1,6 +1,6 @@
 import { addFrequencyIntervals } from './group-frequency';
 import type { AjoGroup, Cycle, CycleStatus, Profile } from './types';
-import { memberDisplayName, type MemberWithProfile } from './members';
+import type { MemberWithProfile } from './members';
 
 export type ScheduleDateSource = 'recorded' | 'estimated' | 'pending';
 
@@ -15,21 +15,13 @@ export interface PayoutScheduleEntry {
   displayStatus: string;
 }
 
-type CycleWithRecipient = Cycle & { recipient?: Profile | null };
-
-function collectorNameForRound(
-  round: number,
-  members: MemberWithProfile[],
-  cycle: CycleWithRecipient | undefined
-): string {
-  const member = members.find((m) => m.rotation_order === round);
-  if (member) return memberDisplayName(member);
-  if (cycle?.recipient) {
-    const name = cycle.recipient.full_name?.trim();
-    if (name) return name;
-  }
-  return 'Not assigned yet';
+export interface ScheduleSlotInput {
+  position: number;
+  userId: string;
+  collectorName: string;
 }
+
+type CycleWithRecipient = Cycle & { recipient?: Profile | null };
 
 function displayStatus(
   group: AjoGroup,
@@ -57,50 +49,53 @@ function displayStatus(
 
 export function buildPayoutSchedule(
   group: AjoGroup,
+  slots: ScheduleSlotInput[],
   members: MemberWithProfile[],
   cycles: CycleWithRecipient[],
   currentUserId?: string
 ): PayoutScheduleEntry[] {
-  const sorted = [...members].sort((a, b) => a.rotation_order - b.rotation_order);
-  if (!sorted.length) return [];
+  if (!slots.length) return [];
 
   const cycleByRound = new Map(cycles.map((c) => [c.cycle_number, c]));
   const firstCycle = cycles.find((c) => c.cycle_number === 1) ?? cycles[0];
   const isDraft = group.status === 'draft';
   const currentRound = group.current_cycle;
 
-  return sorted.map((member) => {
-    const round = member.rotation_order;
-    const cycle = cycleByRound.get(round);
-    const isCurrent = !isDraft && currentRound === round;
-    const isYou = member.user_id === currentUserId;
+  return [...slots]
+    .sort((a, b) => a.position - b.position)
+    .map((slot) => {
+      const round = slot.position;
+      const cycle = cycleByRound.get(round);
+      const member = members.find((m) => m.user_id === slot.userId);
+      const isCurrent = !isDraft && currentRound === round;
+      const isYou = slot.userId === currentUserId;
 
-    let dueDate: string | null = null;
-    let dateSource: ScheduleDateSource = 'pending';
+      let dueDate: string | null = null;
+      let dateSource: ScheduleDateSource = 'pending';
 
-    if (cycle?.due_date) {
-      dueDate = cycle.due_date;
-      dateSource = 'recorded';
-    } else if (!isDraft && firstCycle?.due_date) {
-      dueDate = addFrequencyIntervals(
-        new Date(firstCycle.due_date),
-        group.frequency,
-        round - firstCycle.cycle_number
-      ).toISOString();
-      dateSource = 'estimated';
-    }
+      if (cycle?.due_date) {
+        dueDate = cycle.due_date;
+        dateSource = 'recorded';
+      } else if (!isDraft && firstCycle?.due_date) {
+        dueDate = addFrequencyIntervals(
+          new Date(firstCycle.due_date),
+          group.frequency,
+          round - firstCycle.cycle_number
+        ).toISOString();
+        dateSource = 'estimated';
+      }
 
-    return {
-      round,
-      dueDate,
-      dateSource,
-      collectorName: collectorNameForRound(round, members, cycle),
-      cycleStatus: cycle?.status ?? null,
-      isCurrent,
-      isYou,
-      displayStatus: displayStatus(group, round, cycle, member, isCurrent),
-    };
-  });
+      return {
+        round,
+        dueDate,
+        dateSource,
+        collectorName: slot.collectorName,
+        cycleStatus: cycle?.status ?? null,
+        isCurrent,
+        isYou,
+        displayStatus: displayStatus(group, round, cycle, member, isCurrent),
+      };
+    });
 }
 
 /** Group entries by month key `YYYY-MM` for calendar sections. Undated entries go under `pending`. */

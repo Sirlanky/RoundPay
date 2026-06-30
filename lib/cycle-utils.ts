@@ -20,8 +20,8 @@ export function isLastCycle(cycleNumber: number, memberCount: number): boolean {
 }
 
 export function cyclePositionLabel(cycleNumber: number, memberCount: number): string {
-  if (memberCount <= 0) return `Cycle ${cycleNumber}`;
-  return `Cycle ${cycleNumber} of ${memberCount}`;
+  if (memberCount <= 0) return `Round ${cycleNumber}`;
+  return `Round ${cycleNumber} of ${memberCount}`;
 }
 
 export function netCyclePayout(params: {
@@ -33,9 +33,13 @@ export function netCyclePayout(params: {
   return cyclePayoutBreakdown(params).net;
 }
 
-/** Gross pool when every member pays the fixed contribution amount. */
-export function estimatedGrossPool(contributionAmount: number, contributorCount: number): number {
-  return cycleGrossPool(contributionAmount, contributorCount);
+/** Gross pool when every member pays the fixed contribution amount each installment. */
+export function estimatedGrossPool(
+  contributionAmount: number,
+  contributorCount: number,
+  payInsPerCycle = 1
+): number {
+  return cycleGrossPool(contributionAmount, contributorCount, payInsPerCycle);
 }
 
 /** Expected net payout before/after all contributions are in. */
@@ -45,8 +49,13 @@ export function estimatedNetPayout(params: {
   adminFeePercent: number;
   recipientId: string;
   adminId: string;
+  payInsPerCycle?: number;
 }): number {
-  const gross = estimatedGrossPool(params.contributionAmount, params.contributorCount);
+  const gross = estimatedGrossPool(
+    params.contributionAmount,
+    params.contributorCount,
+    params.payInsPerCycle ?? 1
+  );
   return netCyclePayout({
     grossPool: gross,
     adminFeePercent: params.adminFeePercent,

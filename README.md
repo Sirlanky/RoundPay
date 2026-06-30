@@ -1,6 +1,6 @@
-# Ajo Esusu
+# RoundPayAjo
 
-A Nigerian rotating savings (Ajo/Esusu) mobile app built with Expo, Supabase, and Paystack.
+A Nigerian rotating savings (Ajo/Esusu) mobile app — **RoundPayAjo** helps verified groups save together, record every payment (cash or digital), and coordinate payouts. Built with Expo, Supabase, and Paystack.
 
 ## Features
 
@@ -10,7 +10,7 @@ A Nigerian rotating savings (Ajo/Esusu) mobile app built with Expo, Supabase, an
 - Paystack payments for contributions
 - Paystack transfers for cycle payouts
 - Push notifications for payments and due-date reminders
-- Deep links: `ajoesusu://join/INVITE_CODE`
+- Deep links: `roundpayajo://join/INVITE_CODE`
 
 ## Setup
 

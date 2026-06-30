@@ -1,11 +1,12 @@
 import { useNavigation, useRouter } from 'expo-router';
-import { useLayoutEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useLayoutEffect, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { useAdminMode } from '@/contexts/AdminModeContext';
 import { HomeAdminDashboardCard } from '@/components/home/HomeAdminDashboardCard';
 import {
   HomeGroupSwitcher,
   HomeHeader,
+  HomeCyclePotCard,
   HomeHeroCard,
   HomeNextPayoutCard,
   HomeNoActiveEmpty,
@@ -19,6 +20,8 @@ import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHomeDashboard } from '@/hooks/useHomeDashboard';
 import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
+import { messageFromGroupError } from '@/lib/group-errors';
+import { sendCyclePayout } from '@/lib/payouts';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { spacing, useThemeTokens } from '@/theme';
 
@@ -30,6 +33,7 @@ export default function HomeScreen() {
     loadError,
     refreshing,
     onRefresh,
+    refetch,
     selectGroup,
     hasGroups,
     hasPrimary,
@@ -44,6 +48,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
   const { managesGroups } = useAdminMode();
+  const [payoutSending, setPayoutSending] = useState(false);
 
   const isEmptyHome = !hasPrimary;
 
@@ -67,6 +72,25 @@ export default function HomeScreen() {
     if (!groupId || !dashboard?.userPendingContributionId) return;
     if (!promptProfileSetupForTransfer(profile, router, t)) return;
     router.push(`/group/${groupId}/pay?contributionId=${dashboard.userPendingContributionId}`);
+  };
+
+  const handleSendPayout = async () => {
+    const cycleId = dashboard?.currentCycle?.id;
+    if (!cycleId) return;
+    setPayoutSending(true);
+    try {
+      const result = await sendCyclePayout(cycleId);
+      await refetch();
+      Alert.alert(
+        result.transfer_code === 'manual' ? t('home.collectionRecorded') : t('home.collectionSent'),
+        result.transfer_code === 'manual'
+          ? 'Collector marked as paid. You can start the next round from the group.'
+          : 'Transfer initiated to the collector.'
+      );
+    } catch (e) {
+      Alert.alert(t('home.collectionSendFailed'), messageFromGroupError(e));
+    }
+    setPayoutSending(false);
   };
 
   if (loading) {
@@ -107,7 +131,14 @@ export default function HomeScreen() {
                 onSelect={selectGroup}
               />
               <HomeHeroCard data={dashboard} onPress={goToDetails} />
-              <HomeNextPayoutCard data={dashboard} />
+              {dashboard.cyclePot && !dashboard.payoutReady ? (
+                <HomeCyclePotCard pot={dashboard.cyclePot} />
+              ) : null}
+              <HomeNextPayoutCard
+                data={dashboard}
+                sending={payoutSending}
+                onSendPayout={dashboard.isAdmin ? handleSendPayout : undefined}
+              />
               <HomeStatusStrip data={dashboard} onViewPayments={goToDetails} />
               <HomeQuickActions
                 groupId={groupId}

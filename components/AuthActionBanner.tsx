@@ -1,20 +1,19 @@
 import { useRouter } from 'expo-router';
-import { Alert, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Button } from './Button';
 import { Card } from './Card';
 import { Text } from '@/components/ui/Text';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { messageFromAuthError } from '@/lib/auth-errors';
 import { spacing } from '@/theme';
 
 interface Props {
   action: string;
 }
 
-/** Shown on flows that need a signed-in user (create/join group). */
+/** Shown when a signed-in email account is required. */
 export function AuthActionBanner({ action }: Props) {
-  const { canSave, signInAsGuest } = useAuth();
+  const { canSave } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -23,23 +22,13 @@ export function AuthActionBanner({ action }: Props) {
   return (
     <Card variant="standard" style={styles.card}>
       <Text variant="bodyMedium" style={styles.title}>
-        {t('auth.enterAppTitle')}
+        {t('auth.signInRequiredTitle')}
       </Text>
       <Text variant="bodySmall" color="secondary" style={styles.body}>
-        {t('auth.enterAppBody', { action })}
+        {t('auth.signInRequiredBody', { action })}
       </Text>
       <Button
-        title={t('auth.continueAsGuest')}
-        onPress={() => {
-          void signInAsGuest().catch((e) =>
-            Alert.alert(t('auth.couldNotEnterAppTitle'), messageFromAuthError(e))
-          );
-        }}
-        style={styles.btn}
-      />
-      <Button
         title={t('auth.signInEmail')}
-        variant="secondary"
         onPress={() => router.push('/(auth)/login')}
         style={styles.btn}
       />

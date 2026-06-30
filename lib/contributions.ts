@@ -38,7 +38,11 @@ async function completeCycleIfAllPaid(cycleId: string) {
 }
 
 /** Direct update when RPC is missing (admin only — requires Admin can update contributions policy). */
-async function recordContributionPaymentDirect(contributionId: string) {
+async function recordContributionPaymentDirect(
+  contributionId: string,
+  paymentMethod: string = 'cash',
+  paymentNote?: string
+) {
   await assertAdminForContribution(contributionId);
 
   const { data: row, error: fetchErr } = await supabase
@@ -64,6 +68,8 @@ async function recordContributionPaymentDirect(contributionId: string) {
     .update({
       status: 'paid',
       paid_at: new Date().toISOString(),
+      payment_method: paymentMethod,
+      payment_note: paymentNote?.trim() || null,
       paystack_reference: ref,
     })
     .eq('id', contributionId)
@@ -77,18 +83,24 @@ async function recordContributionPaymentDirect(contributionId: string) {
   await completeCycleIfAllPaid(row.cycle_id);
 }
 
-/** Admin-only: mark a member's contribution as paid (cash / bank transfer). */
-export async function recordContributionPayment(contributionId: string) {
+/** Admin-only: mark a member's contribution as paid (cash / bank transfer / etc.). */
+export async function recordContributionPayment(
+  contributionId: string,
+  paymentMethod: string = 'cash',
+  paymentNote?: string
+) {
   await assertAdminForContribution(contributionId);
 
   const { error } = await supabase.rpc('record_contribution_payment', {
     p_contribution_id: contributionId,
+    p_payment_method: paymentMethod,
+    p_payment_note: paymentNote ?? null,
   });
 
   if (!error) return;
 
   if (isMissingRpc(error) || error.code === '42501') {
-    await recordContributionPaymentDirect(contributionId);
+    await recordContributionPaymentDirect(contributionId, paymentMethod, paymentNote);
     return;
   }
 

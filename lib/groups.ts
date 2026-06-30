@@ -1,5 +1,6 @@
 import { generateInviteCode } from './format';
 import { isFrequencyConstraintError, refreshSupportedGroupFrequencies } from './group-frequency-support';
+import { resolveGroupSchedule, type GroupScheduleInput } from './group-schedule';
 import { ensureProfile } from './profile';
 import { supabase } from './supabase';
 import type { AjoGroup, GroupFrequency } from './types';
@@ -8,14 +9,22 @@ import type { User } from '@supabase/supabase-js';
 export async function createGroup(params: {
   name: string;
   contributionAmount: number;
-  frequency: GroupFrequency;
+  frequency?: GroupFrequency;
   maxMembers: number;
   adminFeePercent: number;
   adminUser: User;
   /** When false, admin organizes only and is not added to the rotation. Default true. */
   adminParticipates?: boolean;
+  /** Pay-ins per collection round (legacy). Prefer `schedule`. */
+  payInsPerCycle?: number;
+  /** Collection + payout schedule (RoundPay create flow). */
+  schedule?: GroupScheduleInput;
 }) {
   await ensureProfile(params.adminUser);
+
+  const resolved = params.schedule
+    ? resolveGroupSchedule(params.schedule)
+    : null;
 
   const inviteCode = generateInviteCode();
   const { data: group, error } = await supabase
@@ -23,12 +32,18 @@ export async function createGroup(params: {
     .insert({
       name: params.name,
       contribution_amount: params.contributionAmount,
-      frequency: params.frequency,
+      frequency: resolved?.frequency ?? params.frequency ?? 'week:1',
       max_members: params.maxMembers,
       admin_fee_percent: params.adminFeePercent,
       admin_id: params.adminUser.id,
       invite_code: inviteCode,
       status: 'draft',
+      pay_ins_per_cycle: resolved?.payInsPerCycle ?? Math.max(1, params.payInsPerCycle ?? 1),
+      collection_frequency: resolved?.collectionFrequency ?? 'weekly',
+      custom_collection_days: resolved?.customCollectionDays,
+      payout_frequency: resolved?.payoutFrequency ?? 'weekly',
+      next_collection_date: resolved?.nextCollectionDate.toISOString(),
+      next_payout_date: resolved?.nextPayoutDate.toISOString(),
     })
     .select()
     .single();
@@ -52,6 +67,11 @@ export async function createGroup(params: {
       await supabase.from('groups').delete().eq('id', group.id);
       throw memberError;
     }
+    await supabase.from('group_payout_slots').insert({
+      group_id: group.id,
+      position: 1,
+      user_id: params.adminUser.id,
+    });
   }
 
   return group;
@@ -115,16 +135,20 @@ export async function joinGroup(inviteCode: string, userId: string) {
 
   if (existing) throw new Error('You are already in this group');
 
-  const nextOrder = (count ?? 0) + 1;
-  const { error: joinError } = await supabase.from('group_members').insert({
-    group_id: group.id,
-    user_id: userId,
-    rotation_order: nextOrder,
-    role: 'member',
+  const { data: groupId, error: joinError } = await supabase.rpc('join_group_by_code', {
+    p_invite_code: inviteCode.trim(),
   });
 
   if (joinError) throw joinError;
-  return group;
+
+  const { data: joinedGroup, error: fetchErr } = await supabase
+    .from('groups')
+    .select('*')
+    .eq('id', groupId as string)
+    .single();
+
+  if (fetchErr || !joinedGroup) throw fetchErr ?? new Error('Group not found');
+  return joinedGroup;
 }
 
 /** Join or leave the rotation as admin while the group is still in draft. */
@@ -233,6 +257,7 @@ export async function updateDraftGroupSettings(
     contributionAmount?: number;
     frequency?: GroupFrequency;
     maxMembers?: number;
+    schedule?: GroupScheduleInput;
   },
   opts?: { currentMemberCount?: number }
 ) {
@@ -260,6 +285,17 @@ export async function updateDraftGroupSettings(
   if (patch.contributionAmount != null) updates.contribution_amount = patch.contributionAmount;
   if (patch.frequency != null) updates.frequency = patch.frequency;
   if (patch.maxMembers != null) updates.max_members = patch.maxMembers;
+
+  if (patch.schedule) {
+    const resolved = resolveGroupSchedule(patch.schedule);
+    updates.collection_frequency = resolved.collectionFrequency;
+    updates.custom_collection_days = resolved.customCollectionDays;
+    updates.payout_frequency = resolved.payoutFrequency;
+    updates.frequency = resolved.frequency;
+    updates.pay_ins_per_cycle = resolved.payInsPerCycle;
+    updates.next_collection_date = resolved.nextCollectionDate.toISOString();
+    updates.next_payout_date = resolved.nextPayoutDate.toISOString();
+  }
 
   const { data, error } = await supabase.from('groups').update(updates).eq('id', groupId).select().single();
   if (error) {

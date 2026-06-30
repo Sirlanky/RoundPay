@@ -49,6 +49,7 @@ export type TranslationKey =
   | 'plural.sharedGroups_other'
   | 'plural.noSharedGroups'
   | 'group.draftTitle'
+  | 'group.draftSpotsLeft'
   | 'group.draftStartWhenFull_one'
   | 'group.draftStartWhenFull_other'
   | 'group.draftOrganizerWhenFull_one'
@@ -76,6 +77,68 @@ export type TranslationKey =
   | 'group.onlyAdminStarts_other'
   | 'group.cycleFinished_one'
   | 'group.cycleFinished_other'
+  | 'group.cycleHistory'
+  | 'group.viewFullHistory'
+  | 'group.viewHistory'
+  | 'group.paidOut'
+  | 'group.fees'
+  | 'group.fullHistoryTitle'
+  | 'group.historyCycles'
+  | 'group.historyPaidOut'
+  | 'group.historyTotal'
+  | 'group.historyFeesNote'
+  | 'group.historyEmpty'
+  | 'group.historyAllInOne'
+  | 'group.cycleDetailTitle'
+  | 'group.cycleNotFound'
+  | 'group.cycleCollector'
+  | 'group.cycleDue'
+  | 'group.cyclePayout'
+  | 'group.cycleFee'
+  | 'group.cyclePaidOn'
+  | 'group.cycleContributions'
+  | 'group.cycleNoContributions'
+  | 'group.contributionsPaid'
+  | 'group.perMember'
+  | 'group.you'
+  | 'group.amountCollected'
+  | 'group.amountWaiting'
+  | 'group.detail.perDrop'
+  | 'group.detail.perDropMulti'
+  | 'group.detail.roster'
+  | 'group.detail.turnMoney'
+  | 'group.detail.turnMoneyUpTo'
+  | 'group.detail.adminFeeNote'
+  | 'group.detail.feesEarned'
+  | 'group.quickActionSchedule'
+  | 'group.quickActionInvite'
+  | 'group.quickActionEdit'
+  | 'group.quickActionAdmin'
+  | 'group.detail.startTitle'
+  | 'group.detail.startReady'
+  | 'group.detail.startWaiting'
+  | 'group.detail.startButton'
+  | 'group.detail.startEnterApp'
+  | 'group.detail.startNeedMembers'
+  | 'group.detail.collectionTitle'
+  | 'group.detail.finalCollectionTitle'
+  | 'group.detail.sendCollection'
+  | 'group.detail.recordCollection'
+  | 'group.detail.sendFinalCollection'
+  | 'group.detail.recordFinalCollection'
+  | 'group.detail.finalCollectionHint'
+  | 'group.detail.nextRoundTitle'
+  | 'group.detail.nextRoundSubtitle'
+  | 'group.detail.nextRoundButton'
+  | 'group.detail.endCircleTitle'
+  | 'group.detail.endCircleSubtitle'
+  | 'group.detail.endCircleButton'
+  | 'group.detail.endCircleHint'
+  | 'group.detail.collectionOrder'
+  | 'group.detail.stepOut'
+  | 'group.detail.joinRotation'
+  | 'group.detail.history'
+  | 'contributions.filteredTitle'
   | 'home.welcomeBack'
   | 'home.welcomeBackName'
   | 'home.startFirstCircle'
@@ -105,6 +168,98 @@ export type TranslationKey =
   | 'home.stepPayouts'
   | 'home.invitations'
   | 'home.noInvitations'
+  | 'home.turnMoney'
+  | 'home.notStartedYet'
+  | 'home.notAvailableYet'
+  | 'home.thisRound'
+  | 'home.paidCount'
+  | 'home.collectionReady'
+  | 'home.sendCollection'
+  | 'home.recordCollection'
+  | 'home.collectionRecorded'
+  | 'home.collectionSent'
+  | 'home.collectionSendFailed'
+  | 'cycle.currentRound'
+  | 'cycle.finalTurn'
+  | 'cycle.noActiveRound'
+  | 'cycle.collectorLine'
+  | 'cycle.dueLine'
+  | 'cycle.paymentsThisRound'
+  | 'cycle.paymentsMissing'
+  | 'cycle.paidProgress'
+  | 'group.editDraftLockedHint'
+  | 'group.turnMoneyUpTo'
+  | 'group.turnMoneyActive'
+  | 'group.collectorReceives'
+  | 'create.payInPerMember'
+  | 'create.basicsSection'
+  | 'create.groupNameLabel'
+  | 'create.groupNamePlaceholder'
+  | 'create.maxMembersLabel'
+  | 'create.scheduleSection'
+  | 'create.feesSection'
+  | 'create.adminFeeLabel'
+  | 'create.roleSection'
+  | 'create.roleParticipateHint'
+  | 'create.roleOrganizerHint'
+  | 'create.roleParticipate'
+  | 'create.roleOrganizer'
+  | 'create.summarySection'
+  | 'create.schedulePayInsNote'
+  | 'create.collectionFrequencyLabel'
+  | 'create.collectionFrequencyHint'
+  | 'create.collectionDaily'
+  | 'create.collectionWeekly'
+  | 'create.collectionMonthly'
+  | 'create.collectionCustom'
+  | 'create.collectionEveryDays'
+  | 'create.customCollectionDaysLabel'
+  | 'create.customCollectionDaysHint'
+  | 'create.payoutFrequencyLabel'
+  | 'create.payoutFrequencyHint'
+  | 'create.payoutWeekly'
+  | 'create.payoutMonthly'
+  | 'create.payoutEndOfCycle'
+  | 'create.scheduleSummaryLine'
+  | 'create.scheduleCollectionRequired'
+  | 'create.schedulePayoutRequired'
+  | 'create.scheduleCustomDaysInvalid'
+  | 'create.editDraftTitle'
+  | 'create.saveDraftChanges'
+  | 'create.maxMembersTooLow'
+  | 'create.monthlyTurnTarget'
+  | 'create.perPayment'
+  | 'create.monthlyTarget'
+  | 'create.turnMoneyLine'
+  | 'create.monthlyTargetTip'
+  | 'create.applyPayInHint'
+  | 'create.applyPayInTitle'
+  | 'create.applyPayInBody'
+  | 'create.summaryHint'
+  | 'create.monthlyTurnTotal'
+  | 'create.useAmount'
+  | 'create.weeklySaveMonthly'
+  | 'create.parkoutModeDesc'
+  | 'create.parkoutPayInLabel'
+  | 'create.parkoutDurationLabel'
+  | 'create.parkoutDurationHint'
+  | 'create.parkoutDurationInvalid'
+  | 'create.parkoutPayInFrequency'
+  | 'create.parkoutSummary'
+  | 'create.useParkoutSetup'
+  | 'create.applyParkoutHint'
+  | 'create.applyParkoutTitle'
+  | 'create.applyParkoutBody'
+  | 'create.parkoutFullCircle'
+  | 'cycle.weeklyPayInsThisMonth'
+  | 'cycle.weeklyPaidProgress'
+  | 'cycle.memberWeekProgress'
+  | 'cycle.weekPayIn'
+  | 'schedule.title'
+  | 'schedule.draftSubtitle'
+  | 'schedule.activeSubtitle'
+  | 'schedule.empty'
+  | 'schedule.footnote'
   | 'profile.section.account'
   | 'profile.section.savings'
   | 'profile.section.notifications'
@@ -134,6 +289,8 @@ export type TranslationKey =
   | 'profile.appLock'
   | 'profile.transactionPin'
   | 'profile.changePassword'
+  | 'profile.accountPasswordNotSet'
+  | 'profile.accountPasswordSet'
   | 'profile.activeDevices'
   | 'profile.currency'
   | 'profile.currencyValue'
@@ -145,6 +302,8 @@ export type TranslationKey =
   | 'profile.contactSupport'
   | 'profile.termsPrivacy'
   | 'profile.about'
+  | 'profile.settingsTitle'
+  | 'profile.manageAccount'
   | 'profile.logout'
   | 'profile.footer'
   | 'profile.editProfile'
@@ -161,6 +320,7 @@ export type TranslationKey =
   | 'profile.photoSetupBody'
   | 'profile.photoFailedTitle'
   | 'profile.photoFailedBody'
+  | 'profile.photoRlsBody'
   | 'profile.payoutLinked'
   | 'profile.saved'
   | 'profile.savedBody'
@@ -252,7 +412,19 @@ export type TranslationKey =
   | 'auth.continueAsGuest'
   | 'auth.signInEmail'
   | 'auth.loginTitle'
+  | 'auth.signUpTitle'
+  | 'auth.logInTitle'
   | 'auth.loginSubtitle'
+  | 'auth.loginModeSubtitle'
+  | 'auth.signUpModeSubtitle'
+  | 'auth.alreadyHaveAccount'
+  | 'auth.needAccountFirst'
+  | 'auth.logInTab'
+  | 'auth.signUpTab'
+  | 'auth.logInButton'
+  | 'auth.signUpButton'
+  | 'auth.enterAppFooter'
+  | 'auth.enterAppLoading'
   | 'auth.simpleLoginSubtitle'
   | 'auth.simpleLoginBody'
   | 'auth.enterAppButton'
@@ -262,11 +434,16 @@ export type TranslationKey =
   | 'auth.emailLabel'
   | 'auth.emailPlaceholder'
   | 'auth.sendSignInEmail'
+  | 'auth.sendSignInCode'
   | 'auth.enterEmailError'
   | 'auth.invalidEmail'
   | 'auth.passwordDivider'
   | 'auth.passwordLabel'
   | 'auth.passwordPlaceholder'
+  | 'auth.confirmPasswordLabel'
+  | 'auth.confirmPasswordPlaceholder'
+  | 'auth.passwordMismatch'
+  | 'auth.passwordTooShort'
   | 'auth.signInWithPassword'
   | 'auth.enterPasswordError'
   | 'auth.useEmailCodeInstead'
@@ -274,6 +451,14 @@ export type TranslationKey =
   | 'auth.forgotPassword'
   | 'auth.resetPasswordSentTitle'
   | 'auth.resetPasswordSentBody'
+  | 'auth.resetPasswordTitle'
+  | 'auth.resetPasswordSubtitle'
+  | 'auth.resetPasswordCodeSubtitle'
+  | 'auth.resetPasswordCodeHint'
+  | 'auth.resetPasswordButton'
+  | 'auth.resetPasswordSuccessTitle'
+  | 'auth.resetPasswordSuccessBody'
+  | 'auth.resetPasswordNeedLink'
   | 'auth.linkEmailDivider'
   | 'auth.linkingGuestNote'
   | 'auth.linkEmailButton'
@@ -318,6 +503,46 @@ export type TranslationKey =
   | 'auth.continueWithApple'
   | 'auth.oauthFailed'
   | 'auth.oauthSetupHint'
+  | 'auth.signInRequiredTitle'
+  | 'auth.signInRequiredBody'
+  | 'identityGate.title'
+  | 'identityGate.body'
+  | 'identityGate.verifyNow'
+  | 'payoutOrder.title'
+  | 'payoutOrder.subtitleAdmin'
+  | 'payoutOrder.subtitleMember'
+  | 'payoutOrder.tapToChange'
+  | 'payoutOrder.collects'
+  | 'payoutOrder.addRound'
+  | 'payoutOrder.addRoundHint'
+  | 'payoutOrder.saveOrder'
+  | 'payoutOrder.unsaved'
+  | 'payoutOrder.savedTitle'
+  | 'payoutOrder.savedBody'
+  | 'payoutOrder.changeCollectorTitle'
+  | 'payoutOrder.changeCollectorHint'
+  | 'payment.recordTitle'
+  | 'payment.methodLabel'
+  | 'payment.methodCash'
+  | 'payment.methodTransfer'
+  | 'payment.methodPos'
+  | 'payment.methodOther'
+  | 'payment.methodPaystack'
+  | 'payment.methodUnknown'
+  | 'payment.noteLabel'
+  | 'payment.notePlaceholder'
+  | 'payment.confirmRecord'
+  | 'cycleSwap.title'
+  | 'cycleSwap.subtitle'
+  | 'cycleSwap.request'
+  | 'cycleSwap.alreadyCollected'
+  | 'cycleSwap.line'
+  | 'cycleSwap.scheduledApproval'
+  | 'cycleSwap.adminApproval'
+  | 'cycleSwap.approve'
+  | 'cycleSwap.approveAsAdmin'
+  | 'cycleSwap.decline'
+  | 'platform.noCustody'
   | 'payouts.notInAppBody'
   | 'payouts.summary'
   | 'payouts.totalReceived'
@@ -446,6 +671,13 @@ export type TranslationKey =
   | 'security.signIn.emailSentBody'
   | 'security.signIn.switchEmail'
   | 'security.signIn.sendFailedTitle'
+  | 'security.password.set'
+  | 'security.password.change'
+  | 'security.password.hint'
+  | 'security.password.accountEmail'
+  | 'security.password.guestHint'
+  | 'security.password.savedTitle'
+  | 'security.password.savedBody'
   | 'security.devices.title'
   | 'security.devices.hint'
   | 'security.devices.thisDevice'
@@ -510,6 +742,7 @@ export type TranslationKey =
   | 'identity.editProfileButton'
   | 'identity.startButton'
   | 'identity.completeButton'
+  | 'identity.completeButtonOtpOnly'
   | 'identity.submitButton'
   | 'identity.confirmTitle'
   | 'identity.confirmBody'
@@ -519,8 +752,33 @@ export type TranslationKey =
   | 'identity.verifiedNote'
   | 'identity.verifiedPreviewNote'
   | 'identity.verifiedOtpNote'
+  | 'identity.verifiedYouverifyNote'
   | 'identity.otpBadge'
+  | 'identity.ninBadge'
+  | 'identity.stepProfile'
+  | 'identity.stepPhone'
+  | 'identity.stepEmail'
+  | 'identity.stepNin'
   | 'identity.adminRequirementNote'
+  | 'identity.ninTitle'
+  | 'identity.ninBody'
+  | 'identity.ninSandboxHint'
+  | 'identity.ninLabel'
+  | 'identity.ninSelfieLabel'
+  | 'identity.ninSelfiePlaceholder'
+  | 'identity.ninTakeSelfie'
+  | 'identity.ninRetakeSelfie'
+  | 'identity.ninConsentLabel'
+  | 'identity.ninSubmitButton'
+  | 'identity.ninInvalidTitle'
+  | 'identity.ninInvalidBody'
+  | 'identity.ninConsentTitle'
+  | 'identity.ninConsentBody'
+  | 'identity.ninSelfieRequiredTitle'
+  | 'identity.ninSelfieRequiredBody'
+  | 'identity.ninSelfieFailedTitle'
+  | 'identity.ninSelfiePermission'
+  | 'identity.ninFailedTitle'
   | 'identity.quickVerifyTitle'
   | 'identity.quickVerifyBody'
   | 'identity.quickVerifyButton'
@@ -538,6 +796,15 @@ export type TranslationKey =
   | 'otp.verifyCode'
   | 'otp.expiryHint'
   | 'otp.devCodeHint'
+  | 'otp.devModePhoneTitle'
+  | 'otp.devModePhoneBody'
+  | 'otp.devModeEmailTitle'
+  | 'otp.devModeEmailBody'
+  | 'otp.devModeVerifyHint'
+  | 'otp.devCodeTapCopy'
+  | 'otp.devCodeCopyA11y'
+  | 'otp.devCodeCopiedTitle'
+  | 'otp.devCodeCopiedBody'
   | 'otp.sendFailedTitle'
   | 'otp.verifyFailedTitle'
   | 'otp.missingCodeTitle'
@@ -679,6 +946,7 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'plural.sharedGroups_other',
   'plural.noSharedGroups',
   'group.draftTitle',
+  'group.draftSpotsLeft',
   'group.draftStartWhenFull_one',
   'group.draftStartWhenFull_other',
   'group.draftOrganizerWhenFull_one',
@@ -706,6 +974,68 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'group.onlyAdminStarts_other',
   'group.cycleFinished_one',
   'group.cycleFinished_other',
+  'group.cycleHistory',
+  'group.viewFullHistory',
+  'group.viewHistory',
+  'group.paidOut',
+  'group.fees',
+  'group.fullHistoryTitle',
+  'group.historyCycles',
+  'group.historyPaidOut',
+  'group.historyTotal',
+  'group.historyFeesNote',
+  'group.historyEmpty',
+  'group.historyAllInOne',
+  'group.cycleDetailTitle',
+  'group.cycleNotFound',
+  'group.cycleCollector',
+  'group.cycleDue',
+  'group.cyclePayout',
+  'group.cycleFee',
+  'group.cyclePaidOn',
+  'group.cycleContributions',
+  'group.cycleNoContributions',
+  'group.contributionsPaid',
+  'group.perMember',
+  'group.you',
+  'group.amountCollected',
+  'group.amountWaiting',
+  'group.detail.perDrop',
+  'group.detail.perDropMulti',
+  'group.detail.roster',
+  'group.detail.turnMoney',
+  'group.detail.turnMoneyUpTo',
+  'group.detail.adminFeeNote',
+  'group.detail.feesEarned',
+  'group.quickActionSchedule',
+  'group.quickActionInvite',
+  'group.quickActionEdit',
+  'group.quickActionAdmin',
+  'group.detail.startTitle',
+  'group.detail.startReady',
+  'group.detail.startWaiting',
+  'group.detail.startButton',
+  'group.detail.startEnterApp',
+  'group.detail.startNeedMembers',
+  'group.detail.collectionTitle',
+  'group.detail.finalCollectionTitle',
+  'group.detail.sendCollection',
+  'group.detail.recordCollection',
+  'group.detail.sendFinalCollection',
+  'group.detail.recordFinalCollection',
+  'group.detail.finalCollectionHint',
+  'group.detail.nextRoundTitle',
+  'group.detail.nextRoundSubtitle',
+  'group.detail.nextRoundButton',
+  'group.detail.endCircleTitle',
+  'group.detail.endCircleSubtitle',
+  'group.detail.endCircleButton',
+  'group.detail.endCircleHint',
+  'group.detail.collectionOrder',
+  'group.detail.stepOut',
+  'group.detail.joinRotation',
+  'group.detail.history',
+  'contributions.filteredTitle',
   'home.welcomeBack',
   'home.welcomeBackName',
   'home.startFirstCircle',
@@ -735,6 +1065,98 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'home.stepPayouts',
   'home.invitations',
   'home.noInvitations',
+  'home.turnMoney',
+  'home.notStartedYet',
+  'home.notAvailableYet',
+  'home.thisRound',
+  'home.paidCount',
+  'home.collectionReady',
+  'home.sendCollection',
+  'home.recordCollection',
+  'home.collectionRecorded',
+  'home.collectionSent',
+  'home.collectionSendFailed',
+  'cycle.currentRound',
+  'cycle.finalTurn',
+  'cycle.noActiveRound',
+  'cycle.collectorLine',
+  'cycle.dueLine',
+  'cycle.paymentsThisRound',
+  'cycle.paymentsMissing',
+  'cycle.paidProgress',
+  'group.editDraftLockedHint',
+  'group.turnMoneyUpTo',
+  'group.turnMoneyActive',
+  'group.collectorReceives',
+  'create.payInPerMember',
+  'create.basicsSection',
+  'create.groupNameLabel',
+  'create.groupNamePlaceholder',
+  'create.maxMembersLabel',
+  'create.scheduleSection',
+  'create.feesSection',
+  'create.adminFeeLabel',
+  'create.roleSection',
+  'create.roleParticipateHint',
+  'create.roleOrganizerHint',
+  'create.roleParticipate',
+  'create.roleOrganizer',
+  'create.summarySection',
+  'create.schedulePayInsNote',
+  'create.collectionFrequencyLabel',
+  'create.collectionFrequencyHint',
+  'create.collectionDaily',
+  'create.collectionWeekly',
+  'create.collectionMonthly',
+  'create.collectionCustom',
+  'create.collectionEveryDays',
+  'create.customCollectionDaysLabel',
+  'create.customCollectionDaysHint',
+  'create.payoutFrequencyLabel',
+  'create.payoutFrequencyHint',
+  'create.payoutWeekly',
+  'create.payoutMonthly',
+  'create.payoutEndOfCycle',
+  'create.scheduleSummaryLine',
+  'create.scheduleCollectionRequired',
+  'create.schedulePayoutRequired',
+  'create.scheduleCustomDaysInvalid',
+  'create.editDraftTitle',
+  'create.saveDraftChanges',
+  'create.maxMembersTooLow',
+  'create.monthlyTurnTarget',
+  'create.perPayment',
+  'create.monthlyTarget',
+  'create.turnMoneyLine',
+  'create.monthlyTargetTip',
+  'create.applyPayInHint',
+  'create.applyPayInTitle',
+  'create.applyPayInBody',
+  'create.summaryHint',
+  'create.monthlyTurnTotal',
+  'create.useAmount',
+  'create.weeklySaveMonthly',
+  'create.parkoutModeDesc',
+  'create.parkoutPayInLabel',
+  'create.parkoutDurationLabel',
+  'create.parkoutDurationHint',
+  'create.parkoutDurationInvalid',
+  'create.parkoutPayInFrequency',
+  'create.parkoutSummary',
+  'create.useParkoutSetup',
+  'create.applyParkoutHint',
+  'create.applyParkoutTitle',
+  'create.applyParkoutBody',
+  'create.parkoutFullCircle',
+  'cycle.weeklyPayInsThisMonth',
+  'cycle.weeklyPaidProgress',
+  'cycle.memberWeekProgress',
+  'cycle.weekPayIn',
+  'schedule.title',
+  'schedule.draftSubtitle',
+  'schedule.activeSubtitle',
+  'schedule.empty',
+  'schedule.footnote',
   'profile.section.account',
   'profile.section.savings',
   'profile.section.notifications',
@@ -764,6 +1186,8 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'profile.appLock',
   'profile.transactionPin',
   'profile.changePassword',
+  'profile.accountPasswordNotSet',
+  'profile.accountPasswordSet',
   'profile.activeDevices',
   'profile.currency',
   'profile.currencyValue',
@@ -775,6 +1199,8 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'profile.contactSupport',
   'profile.termsPrivacy',
   'profile.about',
+  'profile.settingsTitle',
+  'profile.manageAccount',
   'profile.logout',
   'profile.footer',
   'profile.editProfile',
@@ -791,6 +1217,7 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'profile.photoSetupBody',
   'profile.photoFailedTitle',
   'profile.photoFailedBody',
+  'profile.photoRlsBody',
   'profile.payoutLinked',
   'profile.saved',
   'profile.savedBody',
@@ -882,7 +1309,19 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'auth.continueAsGuest',
   'auth.signInEmail',
   'auth.loginTitle',
+  'auth.signUpTitle',
+  'auth.logInTitle',
   'auth.loginSubtitle',
+  'auth.loginModeSubtitle',
+  'auth.signUpModeSubtitle',
+  'auth.alreadyHaveAccount',
+  'auth.needAccountFirst',
+  'auth.logInTab',
+  'auth.signUpTab',
+  'auth.logInButton',
+  'auth.signUpButton',
+  'auth.enterAppFooter',
+  'auth.enterAppLoading',
   'auth.simpleLoginSubtitle',
   'auth.simpleLoginBody',
   'auth.enterAppButton',
@@ -892,11 +1331,16 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'auth.emailLabel',
   'auth.emailPlaceholder',
   'auth.sendSignInEmail',
+  'auth.sendSignInCode',
   'auth.enterEmailError',
   'auth.invalidEmail',
   'auth.passwordDivider',
   'auth.passwordLabel',
   'auth.passwordPlaceholder',
+  'auth.confirmPasswordLabel',
+  'auth.confirmPasswordPlaceholder',
+  'auth.passwordMismatch',
+  'auth.passwordTooShort',
   'auth.signInWithPassword',
   'auth.enterPasswordError',
   'auth.useEmailCodeInstead',
@@ -904,6 +1348,14 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'auth.forgotPassword',
   'auth.resetPasswordSentTitle',
   'auth.resetPasswordSentBody',
+  'auth.resetPasswordTitle',
+  'auth.resetPasswordSubtitle',
+  'auth.resetPasswordCodeSubtitle',
+  'auth.resetPasswordCodeHint',
+  'auth.resetPasswordButton',
+  'auth.resetPasswordSuccessTitle',
+  'auth.resetPasswordSuccessBody',
+  'auth.resetPasswordNeedLink',
   'auth.linkEmailDivider',
   'auth.linkingGuestNote',
   'auth.linkEmailButton',
@@ -948,6 +1400,46 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'auth.continueWithApple',
   'auth.oauthFailed',
   'auth.oauthSetupHint',
+  'auth.signInRequiredTitle',
+  'auth.signInRequiredBody',
+  'identityGate.title',
+  'identityGate.body',
+  'identityGate.verifyNow',
+  'payoutOrder.title',
+  'payoutOrder.subtitleAdmin',
+  'payoutOrder.subtitleMember',
+  'payoutOrder.tapToChange',
+  'payoutOrder.collects',
+  'payoutOrder.addRound',
+  'payoutOrder.addRoundHint',
+  'payoutOrder.saveOrder',
+  'payoutOrder.unsaved',
+  'payoutOrder.savedTitle',
+  'payoutOrder.savedBody',
+  'payoutOrder.changeCollectorTitle',
+  'payoutOrder.changeCollectorHint',
+  'payment.recordTitle',
+  'payment.methodLabel',
+  'payment.methodCash',
+  'payment.methodTransfer',
+  'payment.methodPos',
+  'payment.methodOther',
+  'payment.methodPaystack',
+  'payment.methodUnknown',
+  'payment.noteLabel',
+  'payment.notePlaceholder',
+  'payment.confirmRecord',
+  'cycleSwap.title',
+  'cycleSwap.subtitle',
+  'cycleSwap.request',
+  'cycleSwap.alreadyCollected',
+  'cycleSwap.line',
+  'cycleSwap.scheduledApproval',
+  'cycleSwap.adminApproval',
+  'cycleSwap.approve',
+  'cycleSwap.approveAsAdmin',
+  'cycleSwap.decline',
+  'platform.noCustody',
   'payouts.notInAppBody',
   'payouts.summary',
   'payouts.totalReceived',
@@ -1076,6 +1568,13 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'security.signIn.emailSentBody',
   'security.signIn.switchEmail',
   'security.signIn.sendFailedTitle',
+  'security.password.set',
+  'security.password.change',
+  'security.password.hint',
+  'security.password.accountEmail',
+  'security.password.guestHint',
+  'security.password.savedTitle',
+  'security.password.savedBody',
   'security.devices.title',
   'security.devices.hint',
   'security.devices.thisDevice',
@@ -1140,6 +1639,7 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'identity.editProfileButton',
   'identity.startButton',
   'identity.completeButton',
+  'identity.completeButtonOtpOnly',
   'identity.submitButton',
   'identity.confirmTitle',
   'identity.confirmBody',
@@ -1149,8 +1649,33 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'identity.verifiedNote',
   'identity.verifiedPreviewNote',
   'identity.verifiedOtpNote',
+  'identity.verifiedYouverifyNote',
   'identity.otpBadge',
+  'identity.ninBadge',
+  'identity.stepProfile',
+  'identity.stepPhone',
+  'identity.stepEmail',
+  'identity.stepNin',
   'identity.adminRequirementNote',
+  'identity.ninTitle',
+  'identity.ninBody',
+  'identity.ninSandboxHint',
+  'identity.ninLabel',
+  'identity.ninSelfieLabel',
+  'identity.ninSelfiePlaceholder',
+  'identity.ninTakeSelfie',
+  'identity.ninRetakeSelfie',
+  'identity.ninConsentLabel',
+  'identity.ninSubmitButton',
+  'identity.ninInvalidTitle',
+  'identity.ninInvalidBody',
+  'identity.ninConsentTitle',
+  'identity.ninConsentBody',
+  'identity.ninSelfieRequiredTitle',
+  'identity.ninSelfieRequiredBody',
+  'identity.ninSelfieFailedTitle',
+  'identity.ninSelfiePermission',
+  'identity.ninFailedTitle',
   'identity.quickVerifyTitle',
   'identity.quickVerifyBody',
   'identity.quickVerifyButton',
@@ -1168,6 +1693,15 @@ export const TRANSLATION_KEYS: TranslationKey[] = [
   'otp.verifyCode',
   'otp.expiryHint',
   'otp.devCodeHint',
+  'otp.devModePhoneTitle',
+  'otp.devModePhoneBody',
+  'otp.devModeEmailTitle',
+  'otp.devModeEmailBody',
+  'otp.devModeVerifyHint',
+  'otp.devCodeTapCopy',
+  'otp.devCodeCopyA11y',
+  'otp.devCodeCopiedTitle',
+  'otp.devCodeCopiedBody',
   'otp.sendFailedTitle',
   'otp.verifyFailedTitle',
   'otp.missingCodeTitle',

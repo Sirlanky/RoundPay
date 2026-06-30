@@ -7,6 +7,8 @@ export type IntervalUnit = 'day' | 'week' | 'month';
  */
 export type GroupFrequency = string;
 export type GroupStatus = 'draft' | 'active' | 'completed';
+export type CollectionFrequencyPreset = 'daily' | 'weekly' | 'monthly' | 'custom';
+export type PayoutFrequencyPreset = 'weekly' | 'monthly' | 'end_of_cycle';
 export type MemberRole = 'admin' | 'member';
 export type CycleStatus = 'open' | 'collecting' | 'completed' | 'paid_out';
 export type ContributionStatus = 'pending' | 'paid' | 'failed';
@@ -39,9 +41,12 @@ export interface Profile {
   reminder_payouts?: boolean;
   reminder_hour?: number;
   identity_status?: IdentityStatus;
-  identity_verification_method?: 'placeholder' | 'provider' | 'dojah' | 'otp' | null;
+  identity_verification_method?: 'placeholder' | 'provider' | 'dojah' | 'otp' | 'youverify' | null;
   identity_submitted_at?: string | null;
   identity_verified_at?: string | null;
+  nin_verified_at?: string | null;
+  youverify_request_id?: string | null;
+  nin_last4?: string | null;
   phone_verified_at?: string | null;
   email_verified_at?: string | null;
   phone_otp_reference_id?: string | null;
@@ -55,12 +60,18 @@ export interface AjoGroup {
   name: string;
   contribution_amount: number;
   frequency: GroupFrequency;
+  collection_frequency?: CollectionFrequencyPreset;
+  custom_collection_days?: number | null;
+  payout_frequency?: PayoutFrequencyPreset;
+  next_collection_date?: string | null;
+  next_payout_date?: string | null;
   max_members: number;
   admin_fee_percent: number;
   status: GroupStatus;
   current_cycle: number;
   admin_id: string;
   invite_code: string;
+  pay_ins_per_cycle?: number;
   notes?: string | null;
   penalty_amount?: number;
   penalty_grace_days?: number;
@@ -98,8 +109,11 @@ export interface Contribution {
   member_id: string;
   user_id: string;
   amount: number;
+  installment_number?: number;
   status: ContributionStatus;
   paystack_reference: string | null;
+  payment_method?: 'paystack' | 'cash' | 'bank_transfer' | 'pos' | 'other' | null;
+  payment_note?: string | null;
   paid_at: string | null;
   created_at: string;
 }

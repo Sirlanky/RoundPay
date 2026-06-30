@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Ajo Esusu",
-    "slug": "ajo-esusu",
+    "name": "RoundPayAjo",
+    "slug": "roundpayajo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "ajoesusu",
+    "scheme": "roundpayajo",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true

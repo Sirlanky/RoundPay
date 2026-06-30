@@ -1,9 +1,13 @@
 import { frequencyLabel } from './group-frequency';
 import type { GroupFrequency } from './types';
 
-/** Gross pool for one cycle (sum of all contributions in that cycle). */
-export function cycleGrossPool(contributionAmount: number, contributorCount: number): number {
-  return contributionAmount * contributorCount;
+/** Gross turn money for one collection round. */
+export function cycleGrossPool(
+  contributionAmount: number,
+  contributorCount: number,
+  payInsPerCycle = 1
+): number {
+  return contributionAmount * contributorCount * Math.max(1, payInsPerCycle);
 }
 
 /**
@@ -47,15 +51,25 @@ export function poolSummary(
   memberCount: number,
   frequency: GroupFrequency,
   adminFeePercent: number,
-  opts?: { adminParticipates?: boolean; memberWord?: string }
+  opts?: {
+    adminParticipates?: boolean;
+    memberWord?: string;
+    payInsPerCycle?: number;
+    payInFrequency?: GroupFrequency;
+  }
 ): string {
-  const gross = cycleGrossPool(contributionAmount, memberCount);
-  const freq = frequencyLabel(frequency, { lowercase: true });
+  const payIns = Math.max(1, opts?.payInsPerCycle ?? 1);
+  const gross = cycleGrossPool(contributionAmount, memberCount, payIns);
+  const freq = frequencyLabel(opts?.payInFrequency ?? frequency, { lowercase: true });
   const members = opts?.memberWord ?? (memberCount === 1 ? 'member' : 'members');
-  const base = `${formatNairaShort(contributionAmount)} × ${memberCount} ${members} · ${freq}`;
+  const amountLine =
+    payIns > 1
+      ? `${formatNairaShort(contributionAmount)} ${freq} · park ${payIns} pay-ins · ${memberCount} ${members}`
+      : `${formatNairaShort(contributionAmount)} × ${memberCount} ${members} · ${freq}`;
+  const base = amountLine;
 
   if (adminFeePercent <= 0) {
-    return `${base} · pool ${formatNairaShort(gross)}`;
+    return `${base} · turn money ${formatNairaShort(gross)}`;
   }
 
   const memberNet = cyclePayoutBreakdown({
@@ -66,12 +80,12 @@ export function poolSummary(
   }).net;
 
   if (opts?.adminParticipates === false) {
-    return `${base} · pool ${formatNairaShort(memberNet)} (${adminFeePercent}% admin fee)`;
+    return `${base} · turn money ${formatNairaShort(memberNet)} (${adminFeePercent}% admin fee)`;
   }
 
   if (opts?.adminParticipates) {
     return `${base} · members collect ${formatNairaShort(memberNet)} (${adminFeePercent}% fee) · admin collects ${formatNairaShort(gross)} on their turn`;
   }
 
-  return `${base} · pool ${formatNairaShort(memberNet)} (${adminFeePercent}% admin fee)`;
+  return `${base} · turn money ${formatNairaShort(memberNet)} (${adminFeePercent}% admin fee)`;
 }

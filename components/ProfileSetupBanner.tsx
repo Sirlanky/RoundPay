@@ -2,12 +2,14 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, View } from 'react-native';
 import { Button, Card, Text } from '@/components/ui';
+import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
 import { getProfileSetupSummary } from '@/lib/profile-setup';
 import {
-  clearProfileSetupReminderState,
   dismissProfileSetupReminderForToday,
+  isProfileSetupReminderPermanentlyComplete,
+  markProfileSetupReminderPermanentlyComplete,
   PROFILE_SETUP_REMINDER_AUTO_HIDE_MS,
   tryConsumeProfileSetupReminderShow,
 } from '@/lib/profile-setup-reminder';
@@ -26,10 +28,13 @@ interface Props {
 }
 
 export function ProfileSetupBanner({ profile, variant = 'reminder' }: Props) {
+  const { user } = useAuth();
+  const userId = user?.id;
   const { t } = useTranslation();
   const router = useRouter();
   const { scheme, radius } = useThemeTokens();
   const { ready } = getProfileSetupSummary(profile);
+  const [permanentlyComplete, setPermanentlyComplete] = useState(false);
   const [shown, setShown] = useState(variant === 'persistent');
   const entryY = useRef(new Animated.Value(variant === 'persistent' ? 0 : -12)).current;
   const opacity = useRef(new Animated.Value(variant === 'persistent' ? 1 : 0)).current;
@@ -153,20 +158,34 @@ export function ProfileSetupBanner({ profile, variant = 'reminder' }: Props) {
   ).current;
 
   useEffect(() => {
-    if (ready) {
-      clearHideTimer();
-      void clearProfileSetupReminderState();
-      if (variant === 'reminder' && shown) animateOut();
+    if (!userId) {
+      setPermanentlyComplete(false);
+      return;
     }
-  }, [animateOut, clearHideTimer, ready, shown, variant]);
+    let cancelled = false;
+    void isProfileSetupReminderPermanentlyComplete(userId).then((done) => {
+      if (!cancelled) setPermanentlyComplete(done);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!ready || !userId) return;
+    setPermanentlyComplete(true);
+    void markProfileSetupReminderPermanentlyComplete(userId);
+    clearHideTimer();
+    if (variant === 'reminder' && shown) animateOut();
+  }, [animateOut, clearHideTimer, ready, shown, userId, variant]);
 
   useFocusEffect(
     useCallback(() => {
-      if (ready || variant !== 'reminder') return;
+      if (ready || permanentlyComplete || variant !== 'reminder' || !userId) return;
 
       let cancelled = false;
 
-      void tryConsumeProfileSetupReminderShow().then((shouldShow) => {
+      void tryConsumeProfileSetupReminderShow(userId).then((shouldShow) => {
         if (cancelled || !shouldShow) return;
         animateIn();
         hideTimer.current = setTimeout(() => {
@@ -178,10 +197,18 @@ export function ProfileSetupBanner({ profile, variant = 'reminder' }: Props) {
         cancelled = true;
         clearHideTimer();
       };
-    }, [animateIn, animateOut, clearHideTimer, ready, variant])
+    }, [
+      animateIn,
+      animateOut,
+      clearHideTimer,
+      permanentlyComplete,
+      ready,
+      userId,
+      variant,
+    ])
   );
 
-  if (ready || !shown) return null;
+  if (ready || permanentlyComplete || !shown) return null;
 
   if (variant === 'persistent') {
     return (

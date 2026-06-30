@@ -17,7 +17,7 @@ import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
 import { isProfileReadyForTransfers } from '@/lib/profile-setup';
 import { spacing, useThemeTokens } from '@/theme';
 
-const CALLBACK_PATTERNS = ['payment-callback', 'ajoesusu://', 'roundpay://'];
+const CALLBACK_PATTERNS = ['payment-callback', 'roundpayajo://', 'roundpay://'];
 
 async function waitForPaidStatus(contributionId: string, attempts = 10): Promise<boolean> {
   for (let i = 0; i < attempts; i++) {

@@ -6,6 +6,13 @@ export interface EmailOtpPayload {
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 
+/** Resend sandbox only delivers to the account owner until a domain is verified. */
+export function isResendRecipientRestrictedError(message: string): boolean {
+  return /only send testing emails|verify a domain|must be a verified email|recipient.*not allowed/i.test(
+    message
+  );
+}
+
 function getResendConfig() {
   const apiKey = Deno.env.get('RESEND_API_KEY') ?? '';
   const from = Deno.env.get('RESEND_FROM_EMAIL') ?? '';
@@ -86,6 +93,9 @@ export async function resendEmailOtp(to: string): Promise<{ reference_id: string
       (json as { message?: string }).message ??
       (json as { error?: string }).error ??
       `Resend email failed (${res.status})`;
+    if (isResendRecipientRestrictedError(message)) {
+      throw new Error(`RESEND_RECIPIENT_RESTRICTED: ${message}`);
+    }
     throw new Error(message);
   }
 

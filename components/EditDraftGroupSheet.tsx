@@ -9,19 +9,27 @@ import {
   View,
 } from 'react-native';
 import { Button } from '@/components/ui';
-import { GroupFrequencyPicker } from '@/components/GroupFrequencyPicker';
+import { GroupSchedulePickers } from '@/components/group/GroupSchedulePickers';
 import { Input } from '@/components/Input';
 import { useTranslation } from '@/contexts/LanguageContext';
-import { frequencyLabel } from '@/lib/group-frequency';
 import { poolSummary, validateCreateGroupInput } from '@/lib/group-validation';
-import type { AjoGroup, GroupFrequency } from '@/lib/types';
+import {
+  parseCustomCollectionDays,
+  resolveGroupSchedule,
+  scheduleFromGroup,
+  scheduleSummaryLine,
+  validateGroupSchedule,
+  type GroupScheduleInput,
+} from '@/lib/group-schedule';
+import type { AjoGroup } from '@/lib/types';
 import { spacing, useThemeTokens } from '@/theme';
 
 export interface DraftGroupFormValues {
   name: string;
   amount: string;
   maxMembers: string;
-  frequency: GroupFrequency;
+  schedule: GroupScheduleInput;
+  customDaysRaw: string;
 }
 
 interface Props {
@@ -32,10 +40,23 @@ interface Props {
   saving: boolean;
   error?: string;
   values: DraftGroupFormValues;
-  supported?: GroupFrequency[];
   onChange: (patch: Partial<DraftGroupFormValues>) => void;
   onSave: () => void;
   onClose: () => void;
+}
+
+export function draftFormValuesFromGroup(group: AjoGroup): DraftGroupFormValues {
+  const schedule = scheduleFromGroup(group);
+  return {
+    name: group.name,
+    amount: String(group.contribution_amount),
+    maxMembers: String(group.max_members),
+    schedule,
+    customDaysRaw:
+      schedule.collectionFrequency === 'custom'
+        ? String(schedule.customCollectionDays ?? 5)
+        : '5',
+  };
 }
 
 export function EditDraftGroupSheet({
@@ -46,13 +67,23 @@ export function EditDraftGroupSheet({
   saving,
   error,
   values,
-  supported,
   onChange,
   onSave,
   onClose,
 }: Props) {
-  const { tp } = useTranslation();
+  const { tp, t } = useTranslation();
   const { colors } = useThemeTokens();
+
+  const scheduleInput =
+    values.schedule.collectionFrequency === 'custom'
+      ? {
+          ...values.schedule,
+          customCollectionDays:
+            parseCustomCollectionDays(values.customDaysRaw) ??
+            values.schedule.customCollectionDays ??
+            5,
+        }
+      : values.schedule;
 
   const validation = validateCreateGroupInput({
     name: values.name,
@@ -61,18 +92,23 @@ export function EditDraftGroupSheet({
     adminFeeRaw: String(group.admin_fee_percent),
   });
 
+  const scheduleValidation = validateGroupSchedule(scheduleInput);
+  const resolved = scheduleValidation.ok ? resolveGroupSchedule(scheduleInput) : null;
+
   const maxMembersNum = parseInt(values.maxMembers.replace(/\D/g, ''), 10);
   const maxMembersTooLow = Number.isFinite(maxMembersNum) && maxMembersNum < memberCount;
 
   const summary =
-    validation.ok && !maxMembersTooLow
+    validation.ok && scheduleValidation.ok && resolved && !maxMembersTooLow
       ? poolSummary(
           validation.data.contributionAmount,
           validation.data.maxMembers,
-          values.frequency,
+          resolved.frequency,
           group.admin_fee_percent,
           {
             adminParticipates,
+            payInsPerCycle: resolved.payInsPerCycle,
+            payInFrequency: resolved.frequency,
             memberWord: tp(
               validation.data.maxMembers,
               'plural.memberNoun_one',
@@ -82,7 +118,7 @@ export function EditDraftGroupSheet({
         )
       : null;
 
-  const canSave = validation.ok && !maxMembersTooLow && !saving;
+  const canSave = validation.ok && scheduleValidation.ok && !maxMembersTooLow && !saving;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -94,52 +130,67 @@ export function EditDraftGroupSheet({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>Edit group settings</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>{t('create.editDraftTitle')}</Text>
             <Pressable onPress={onClose} hitSlop={8}>
-              <Text style={[styles.close, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.close, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
             </Pressable>
           </View>
 
           <Text style={[styles.hint, { color: colors.textSecondary }]}>
-            You can change these while the group is still in draft. Once cycle 1 starts, settings are locked.
+            {t('group.editDraftLockedHint')}
           </Text>
 
           {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
 
-          <Input label="Group name" value={values.name} onChangeText={(name) => onChange({ name })} />
+          <Input label={t('create.groupNameLabel')} value={values.name} onChangeText={(name) => onChange({ name })} />
           <Input
-            label="Contribution per member (₦)"
+            label={t('create.payInPerMember')}
             value={values.amount}
             onChangeText={(amount) => onChange({ amount })}
             keyboardType="number-pad"
           />
 
-          <Text style={[styles.label, { color: colors.textPrimary }]}>How often?</Text>
-          <GroupFrequencyPicker
-            value={values.frequency}
-            onChange={(frequency) => onChange({ frequency })}
-            supported={supported}
+          <GroupSchedulePickers
+            value={scheduleInput}
+            customDaysRaw={values.customDaysRaw}
+            onChange={(patch) =>
+              onChange({ schedule: { ...values.schedule, ...patch } })
+            }
+            onCustomDaysChange={(customDaysRaw) => {
+              const days = parseCustomCollectionDays(customDaysRaw);
+              onChange({
+                customDaysRaw,
+                schedule: {
+                  ...values.schedule,
+                  customCollectionDays: days ?? values.schedule.customCollectionDays,
+                },
+              });
+            }}
           />
 
+          {scheduleValidation.ok ? (
+            <Text style={[styles.scheduleLine, { color: colors.textSecondary }]}>
+              {scheduleSummaryLine(scheduleInput, t)}
+            </Text>
+          ) : null}
+
           <Input
-            label="Max members"
+            label={t('create.maxMembersLabel')}
             value={values.maxMembers}
             onChangeText={(maxMembers) => onChange({ maxMembers })}
             keyboardType="number-pad"
           />
           {maxMembersTooLow ? (
             <Text style={[styles.error, { color: colors.error }]}>
-              Max members cannot be less than current roster ({memberCount} joined).
+              {t('create.maxMembersTooLow', { count: memberCount })}
             </Text>
           ) : null}
 
           {summary ? (
-            <Text style={[styles.summary, { color: colors.textPrimary }]}>
-              {summary} · {frequencyLabel(values.frequency).toLowerCase()} contributions
-            </Text>
+            <Text style={[styles.summary, { color: colors.textPrimary }]}>{summary}</Text>
           ) : null}
 
-          <Button title="Save changes" onPress={onSave} loading={saving} disabled={!canSave} />
+          <Button title={t('create.saveDraftChanges')} onPress={onSave} loading={saving} disabled={!canSave} />
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
@@ -153,7 +204,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700' },
   close: { fontSize: 16 },
   hint: { fontSize: 14, lineHeight: 20, marginBottom: spacing.md },
-  label: { fontSize: 14, fontWeight: '500', marginBottom: spacing.sm },
+  scheduleLine: { fontSize: 13, lineHeight: 18, marginBottom: spacing.md },
   error: { fontSize: 13, marginBottom: spacing.sm },
   summary: { fontSize: 14, lineHeight: 20, marginVertical: spacing.md },
 });

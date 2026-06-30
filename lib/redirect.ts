@@ -2,7 +2,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Linking from 'expo-linking';
 
-export const APP_AUTH_SCHEME = 'ajoesusu';
+export const APP_AUTH_SCHEME = 'roundpayajo';
 
 /** True when running inside the App Store / Play Store Expo Go app (not a dev or production build). */
 export function isExpoGo(): boolean {
@@ -39,7 +39,7 @@ export function getAuthRedirectUrlForDocs(): string {
       '',
       'Expo Go: add exp://** in Supabase redirect URLs.',
       'Links may show "Open with" — pick Expo Go → Always, or use the 6-digit code instead.',
-      'For one-tap links, install a dev build (ajoesusu://**).'
+      'For one-tap links, install a dev build (roundpayajo://**).'
     );
   } else {
     lines.push('', `Add ${APP_AUTH_SCHEME}://** in Supabase redirect URLs.`);
@@ -54,7 +54,8 @@ export function urlHasAuthParams(url: string): boolean {
     url.includes('access_token') ||
     url.includes('token_hash') ||
     url.includes('type=magiclink') ||
-    url.includes('type=email')
+    url.includes('type=email') ||
+    url.includes('type=recovery')
   );
 }
 

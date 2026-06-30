@@ -4,35 +4,57 @@ import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { AuthActionBanner } from '@/components/AuthActionBanner';
 import { Button, Card } from '@/components/ui';
 import { GroupCreatedSuccess } from '@/components/GroupCreatedSuccess';
-import { GroupFrequencyPicker } from '@/components/GroupFrequencyPicker';
+import { GroupSchedulePickers } from '@/components/group/GroupSchedulePickers';
 import { Input } from '@/components/Input';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminMode } from '@/contexts/AdminModeContext';
 import { useTranslation } from '@/contexts/LanguageContext';
+import { formatNaira } from '@/lib/format';
 import { messageFromGroupError } from '@/lib/group-errors';
-import { alertProfileDatabaseFix, isProfileDatabaseFixError } from '@/lib/profile';
 import { poolSummary, validateCreateGroupInput } from '@/lib/group-validation';
+import {
+  parseCustomCollectionDays,
+  resolveGroupSchedule,
+  scheduleSummaryLine,
+  validateGroupSchedule,
+  type GroupScheduleInput,
+} from '@/lib/group-schedule';
 import { createGroup } from '@/lib/groups';
 import { promptSaveAuth } from '@/lib/prompt-save-auth';
-import type { AjoGroup, GroupFrequency } from '@/lib/types';
+import { promptIdentityRequired } from '@/lib/identity-gate';
+import { alertProfileDatabaseFix, isProfileDatabaseFixError } from '@/lib/profile';
+import type { AjoGroup } from '@/lib/types';
 import { spacing, useThemeTokens } from '@/theme';
 
+const DEFAULT_SCHEDULE: GroupScheduleInput = {
+  collectionFrequency: 'weekly',
+  customCollectionDays: null,
+  payoutFrequency: 'monthly',
+};
+
 export default function CreateGroupScreen() {
-  const { user, canSave, exitBuildMode, signInAsGuest } = useAuth();
+  const { user, profile, canSave, exitBuildMode } = useAuth();
   const { refreshAdminAccess } = useAdminMode();
-  const { tp } = useTranslation();
+  const { tp, t } = useTranslation();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
-  const [maxMembers, setMaxMembers] = useState('10');
+  const [maxMembers, setMaxMembers] = useState('4');
   const [adminFee, setAdminFee] = useState('0');
   const [adminParticipates, setAdminParticipates] = useState(true);
-  const [frequency, setFrequency] = useState<GroupFrequency>('week:1');
+  const [schedule, setSchedule] = useState<GroupScheduleInput>(DEFAULT_SCHEDULE);
+  const [customDaysRaw, setCustomDaysRaw] = useState('5');
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState<AjoGroup | null>(null);
   const [formHint, setFormHint] = useState('');
   const router = useRouter();
   const { colors } = useThemeTokens();
+
+  const scheduleInput = useMemo((): GroupScheduleInput => {
+    if (schedule.collectionFrequency !== 'custom') return schedule;
+    const days = parseCustomCollectionDays(customDaysRaw);
+    return { ...schedule, customCollectionDays: days ?? schedule.customCollectionDays ?? 5 };
+  }, [schedule, customDaysRaw]);
 
   const validation = useMemo(
     () =>
@@ -45,15 +67,24 @@ export default function CreateGroupScreen() {
     [name, amount, maxMembers, adminFee]
   );
 
+  const scheduleValidation = useMemo(() => validateGroupSchedule(scheduleInput), [scheduleInput]);
+
+  const resolvedSchedule = useMemo(
+    () => (scheduleValidation.ok ? resolveGroupSchedule(scheduleInput) : null),
+    [scheduleInput, scheduleValidation.ok]
+  );
+
   const summary =
-    validation.ok
+    validation.ok && scheduleValidation.ok && resolvedSchedule
       ? poolSummary(
           validation.data.contributionAmount,
           validation.data.maxMembers,
-          frequency,
+          resolvedSchedule.frequency,
           validation.data.adminFeePercent,
           {
             adminParticipates,
+            payInsPerCycle: resolvedSchedule.payInsPerCycle,
+            payInFrequency: resolvedSchedule.frequency,
             memberWord: tp(
               validation.data.maxMembers,
               'plural.memberNoun_one',
@@ -63,8 +94,25 @@ export default function CreateGroupScreen() {
         )
       : null;
 
+  const handleScheduleChange = (patch: Partial<GroupScheduleInput>) => {
+    setSchedule((prev) => ({ ...prev, ...patch }));
+  };
+
+  const handleCustomDaysChange = (raw: string) => {
+    setCustomDaysRaw(raw);
+    const days = parseCustomCollectionDays(raw);
+    if (days != null) {
+      setSchedule((prev) => ({ ...prev, customCollectionDays: days }));
+    }
+  };
+
   const handleCreate = async () => {
     setFormHint('');
+
+    if (!scheduleValidation.ok) {
+      setFormHint(t(scheduleValidation.messageKey));
+      return;
+    }
 
     if (!validation.ok) {
       setFormHint(validation.message);
@@ -79,48 +127,29 @@ export default function CreateGroupScreen() {
           exitBuildMode();
           router.replace('/(auth)/login');
         },
-        onGuest: async () => {
-          setLoading(true);
-          try {
-            const guest = await signInAsGuest();
-            const group = await createGroup({
-              name: validation.data.name,
-              contributionAmount: validation.data.contributionAmount,
-              frequency,
-              maxMembers: validation.data.maxMembers,
-              adminFeePercent: validation.data.adminFeePercent,
-              adminUser: guest,
-              adminParticipates,
-            });
-            setCreated(group as AjoGroup);
-            void refreshAdminAccess();
-          } catch (e) {
-            const msg = messageFromGroupError(e);
-            setFormHint(msg);
-            if (isProfileDatabaseFixError(msg)) alertProfileDatabaseFix();
-            else Alert.alert('Could not create group', msg);
-          }
-          setLoading(false);
-        },
+        onGuest: () => {},
+        showGuest: false,
       });
       return;
     }
 
     if (!user) {
-      Alert.alert('Sign in required', 'Enter the app from Profile to create a group.');
+      Alert.alert('Sign in required', 'Sign in with email to create a group.');
       return;
     }
+
+    if (!promptIdentityRequired(profile, router, t)) return;
 
     setLoading(true);
     try {
       const group = await createGroup({
         name: validation.data.name,
         contributionAmount: validation.data.contributionAmount,
-        frequency,
         maxMembers: validation.data.maxMembers,
         adminFeePercent: validation.data.adminFeePercent,
         adminUser: user,
         adminParticipates,
+        schedule: scheduleInput,
       });
       setCreated(group as AjoGroup);
       void refreshAdminAccess();
@@ -146,6 +175,8 @@ export default function CreateGroupScreen() {
             setName('');
             setAmount('');
             setFormHint('');
+            setSchedule(DEFAULT_SCHEDULE);
+            setCustomDaysRaw('5');
           }}
         />
       </Screen>
@@ -154,49 +185,66 @@ export default function CreateGroupScreen() {
 
   return (
     <Screen keyboard safeArea={false} contentStyle={styles.content}>
-      <Text style={[styles.lead, { color: colors.textSecondary }]}>
-        Set the rules for your Ajo. Everyone must join before the admin starts cycle 1.
-      </Text>
-
       <AuthActionBanner action="create a group" />
+
       <Card>
-        <Text style={[styles.section, { color: colors.textPrimary }]}>Basics</Text>
-        <Input label="Group name" value={name} onChangeText={setName} placeholder="e.g. Office Ajo" />
+        <Text style={[styles.section, { color: colors.textPrimary }]}>{t('create.basicsSection')}</Text>
         <Input
-          label="Contribution per member (₦)"
+          label={t('create.groupNameLabel')}
+          value={name}
+          onChangeText={setName}
+          placeholder={t('create.groupNamePlaceholder')}
+        />
+        <Input
+          label={t('create.payInPerMember')}
           value={amount}
           onChangeText={setAmount}
           keyboardType="number-pad"
-          placeholder="50000"
+          placeholder="10000"
         />
-
-        <Text style={[styles.label, { color: colors.textPrimary }]}>How often?</Text>
-        <GroupFrequencyPicker value={frequency} onChange={setFrequency} />
+        <Input
+          label={t('create.maxMembersLabel')}
+          value={maxMembers}
+          onChangeText={setMaxMembers}
+          keyboardType="number-pad"
+          placeholder="4"
+        />
       </Card>
 
       <Card>
-        <Text style={[styles.section, { color: colors.textPrimary }]}>Size & fees</Text>
-        <Input label="Max members" value={maxMembers} onChangeText={setMaxMembers} keyboardType="number-pad" />
+        <Text style={[styles.section, { color: colors.textPrimary }]}>{t('create.scheduleSection')}</Text>
+        <GroupSchedulePickers
+          value={scheduleInput}
+          customDaysRaw={customDaysRaw}
+          onChange={handleScheduleChange}
+          onCustomDaysChange={handleCustomDaysChange}
+        />
+        {scheduleValidation.ok && resolvedSchedule ? (
+          <Text style={[styles.scheduleLine, { color: colors.textSecondary }]}>
+            {scheduleSummaryLine(scheduleInput, t)}
+          </Text>
+        ) : null}
+      </Card>
+
+      <Card>
+        <Text style={[styles.section, { color: colors.textPrimary }]}>{t('create.feesSection')}</Text>
         <Input
-          label="Admin fee (%)"
+          label={t('create.adminFeeLabel')}
           value={adminFee}
           onChangeText={setAdminFee}
           keyboardType="decimal-pad"
           placeholder="0"
         />
-        <Text style={[styles.feeHint, { color: colors.textSecondary }]}>
-          Optional fee taken when a member collects. The admin is never charged on their own turn.
-        </Text>
       </Card>
 
       <Card>
         <View style={styles.participationRow}>
           <View style={styles.participationCopy}>
-            <Text style={[styles.section, { color: colors.textPrimary, marginBottom: 4 }]}>Your role</Text>
+            <Text style={[styles.section, { color: colors.textPrimary, marginBottom: 4 }]}>
+              {t('create.roleSection')}
+            </Text>
             <Text style={[styles.feeHint, { color: colors.textSecondary, marginTop: 0 }]}>
-              {adminParticipates
-                ? 'You will contribute and collect on your turn like other members.'
-                : 'Organizer only — you manage the group but are not in the rotation.'}
+              {adminParticipates ? t('create.roleParticipateHint') : t('create.roleOrganizerHint')}
             </Text>
           </View>
           <Switch
@@ -207,19 +255,25 @@ export default function CreateGroupScreen() {
           />
         </View>
         <Text style={[styles.participationLabel, { color: colors.textPrimary }]}>
-          {adminParticipates ? 'I will contribute' : 'Organizer only'}
+          {adminParticipates ? t('create.roleParticipate') : t('create.roleOrganizer')}
         </Text>
       </Card>
 
       {summary ? (
         <Card>
-          <Text style={[styles.section, { color: colors.textPrimary }]}>Summary</Text>
+          <Text style={[styles.section, { color: colors.textPrimary }]}>{t('create.summarySection')}</Text>
           <Text style={[styles.summary, { color: colors.textPrimary }]}>{summary}</Text>
+          {resolvedSchedule && resolvedSchedule.payInsPerCycle > 1 ? (
+            <Text style={[styles.scheduleLine, { color: colors.textSecondary, marginTop: spacing.sm }]}>
+              {t('create.schedulePayInsNote', {
+                count: resolvedSchedule.payInsPerCycle,
+                amount: formatNaira(validation.ok ? validation.data.contributionAmount : 0),
+              })}
+            </Text>
+          ) : null}
         </Card>
       ) : (
-        <Text style={[styles.formHint, { color: colors.textSecondary }]}>
-          Enter a group name and contribution amount (e.g. 50000) to see a summary.
-        </Text>
+        <Text style={[styles.formHint, { color: colors.textSecondary }]}>{t('create.summaryHint')}</Text>
       )}
 
       {formHint ? <Text style={[styles.formHint, { color: colors.error }]}>{formHint}</Text> : null}
@@ -231,11 +285,9 @@ export default function CreateGroupScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing.sm },
-  lead: { fontSize: 15, lineHeight: 22, marginBottom: spacing.md },
   section: { fontSize: 16, fontWeight: '700', marginBottom: spacing.md },
-  label: { fontSize: 14, fontWeight: '500', marginBottom: spacing.sm },
-  freqHint: { fontSize: 12, lineHeight: 17, marginTop: -spacing.xs, marginBottom: spacing.sm },
   feeHint: { fontSize: 12, lineHeight: 17, marginTop: -spacing.xs },
+  scheduleLine: { fontSize: 13, lineHeight: 18 },
   summary: { fontSize: 15, lineHeight: 22 },
   formHint: { fontSize: 13, lineHeight: 18, marginBottom: spacing.sm, textAlign: 'center' },
   participationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

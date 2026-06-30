@@ -37,6 +37,23 @@ function MessagesGate({ children }: { children: React.ReactNode }) {
   return <MessagesProvider userId={user?.id}>{children}</MessagesProvider>;
 }
 
+function PasswordRecoveryRedirect() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        router.replace('/(auth)/reset-password');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  return null;
+}
+
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, loading, configured, buildMode } = useAuth();
   const segments = useSegments();
@@ -50,8 +67,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       }
       const result = await createSessionFromUrl(url);
       if (result.ok) {
-        // Ensure session is persisted before routing (avoids bounce back to login).
         await supabase.auth.getSession();
+        if (result.recovery) {
+          router.replace('/(auth)/reset-password');
+          return;
+        }
         router.replace('/(tabs)');
         return;
       }
@@ -92,6 +112,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       const isAnonymous = session?.user?.is_anonymous === true;
       const onLogin = inAuthGroup && authScreen === 'login';
       const onVerifyOtp = inAuthGroup && authScreen === 'verify-otp';
+      const onResetPassword = inAuthGroup && authScreen === 'reset-password';
       // Email OTP flow only — guest "Enter app" should go straight to tabs.
       const stayForEmailAuth =
         !SIMPLE_GUEST_AUTH &&
@@ -102,7 +123,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       } else if (!hasSession && !buildMode && !inAuthGroup && !inAuthCallback) {
         target = '/(auth)/login';
       } else if ((hasSession || buildMode) && inAuthGroup) {
-        if (!stayForEmailAuth && (buildMode || hasSession)) {
+        if (!stayForEmailAuth && !onResetPassword && (buildMode || hasSession)) {
           target = '/(tabs)';
         }
       }
@@ -165,6 +186,7 @@ export default function RootLayout() {
               <PlanProvider>
             <TransactionPinProvider>
               <AuthGate>
+                <PasswordRecoveryRedirect />
                 <MessagesGate>
                 <AppLockGate>
                   <PushNotificationHandler />

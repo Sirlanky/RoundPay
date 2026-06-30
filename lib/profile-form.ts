@@ -1,3 +1,4 @@
+import { isValidNgPhone } from './phone';
 import type { Profile, ProfileGender } from './types';
 
 export interface ProfileFormValues {
@@ -86,6 +87,11 @@ export function validateProfileForm(values: ProfileFormValues): string | null {
   const email = values.email.trim();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return 'Enter a valid email address.';
+  }
+
+  const phone = values.phone.trim();
+  if (phone && !isValidNgPhone(phone)) {
+    return 'Enter a valid Nigerian phone number (e.g. 08012345678).';
   }
 
   const dob = values.dateOfBirth.trim();

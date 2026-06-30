@@ -1,5 +1,5 @@
 {
-  "name": "ajo-esusu",
+  "name": "roundpayajo",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
@@ -12,7 +12,6 @@
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.9",
-    "expo-dev-client": "~6.0.21",
     "expo-device": "~8.0.10",
     "expo-font": "~14.0.12",
     "expo-image": "~3.0.11",
@@ -50,7 +49,7 @@
     "start": "expo start --go",
     "start:ios": "expo start --ios --clear",
     "start:tunnel": "expo start --go --clear --tunnel",
-    "start:dev-client": "expo start --dev-client",
+    "start:phone": "expo start --go --clear --tunnel",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
@@ -64,7 +63,7 @@
     "prisma:studio": "prisma studio",
     "supabase:login": "supabase login",
     "supabase:link": "supabase link",
-    "supabase:deploy-functions": "supabase functions deploy resolve-account && supabase functions deploy save-bank-account && supabase functions deploy create-contribution-payment && supabase functions deploy paystack-webhook && supabase functions deploy trigger-payout && supabase functions deploy send-reminders && supabase functions deploy dispatch-push && supabase functions deploy send-identity-otp && supabase functions deploy verify-identity-otp"
+    "supabase:deploy-functions": "supabase functions deploy resolve-account && supabase functions deploy save-bank-account && supabase functions deploy create-contribution-payment && supabase functions deploy paystack-webhook && supabase functions deploy trigger-payout && supabase functions deploy send-reminders && supabase functions deploy dispatch-push && supabase functions deploy send-identity-otp && supabase functions deploy verify-identity-otp && supabase functions deploy verify-nin"
   },
   "private": true
 }

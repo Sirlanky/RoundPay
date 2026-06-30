@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { maskEmail, maskPhone, normalizeEmail, normalizeNgPhone } from '../_shared/identity-contact.ts';
 import { createLocalOtp } from '../_shared/local-otp.ts';
-import { resendEmailOtp } from '../_shared/resend-email-otp.ts';
+import { isResendRecipientRestrictedError, resendEmailOtp } from '../_shared/resend-email-otp.ts';
 import { termiiSendOtp } from '../_shared/termii.ts';
 
 type Channel = 'phone' | 'email';
@@ -13,6 +13,25 @@ function hasTermii(): boolean {
 
 function hasResend(): boolean {
   return Boolean(Deno.env.get('RESEND_API_KEY')?.trim() && Deno.env.get('RESEND_FROM_EMAIL')?.trim());
+}
+
+async function useLocalEmailOtpFallback(
+  email: string,
+  reason: unknown
+): Promise<{ destination: string; reference_id: string; status: string; dev_code: string }> {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  if (isResendRecipientRestrictedError(message)) {
+    console.warn('Resend sandbox: recipient not allowed, using on-screen dev code for', email);
+  } else {
+    console.error('Email OTP send failed, using local OTP fallback:', reason);
+  }
+  const local = await createLocalOtp({ channel: 'email', destination: email });
+  return {
+    destination: email,
+    reference_id: local.reference_id,
+    status: 'dev',
+    dev_code: local.dev_code,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -62,9 +81,17 @@ Deno.serve(async (req) => {
       destination = normalizeNgPhone(profile.phone);
 
       if (hasTermii()) {
-        const result = await termiiSendOtp(destination);
-        reference_id = result.pin_id;
-        status = result.status;
+        try {
+          const result = await termiiSendOtp(destination);
+          reference_id = result.pin_id;
+          status = result.status;
+        } catch (termiiError) {
+          console.error('Termii send failed, using local OTP fallback:', termiiError);
+          const local = await createLocalOtp({ channel: 'phone', destination });
+          reference_id = local.reference_id;
+          status = 'dev';
+          dev_code = local.dev_code;
+        }
       } else {
         const local = await createLocalOtp({ channel: 'phone', destination });
         reference_id = local.reference_id;
@@ -83,10 +110,18 @@ Deno.serve(async (req) => {
       }
 
       if (hasResend()) {
-        const result = await resendEmailOtp(email);
-        destination = result.destination;
-        reference_id = result.reference_id;
-        status = 'sent';
+        try {
+          const result = await resendEmailOtp(email);
+          destination = result.destination;
+          reference_id = result.reference_id;
+          status = 'sent';
+        } catch (resendError) {
+          const fallback = await useLocalEmailOtpFallback(email, resendError);
+          destination = fallback.destination;
+          reference_id = fallback.reference_id;
+          status = fallback.status;
+          dev_code = fallback.dev_code;
+        }
       } else {
         const local = await createLocalOtp({ channel: 'email', destination: email });
         destination = email;

@@ -20,7 +20,7 @@ interface Props {
   refreshing?: boolean;
   onRefresh?: () => void;
   style?: ViewStyle;
-  contentStyle?: ViewStyle;
+  contentStyle?: ViewStyle | ViewStyle[];
   safeArea?: boolean;
   avoidTopInset?: boolean;
   tabBarInset?: boolean;

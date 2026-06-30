@@ -1,4 +1,5 @@
 import { estimatedNetPayout } from './cycle-utils';
+import { cycleGrossPool } from './admin-fee';
 import { getUserGroups } from './groups';
 import { memberDisplayName, type MemberWithProfile } from './members';
 import { supabase } from './supabase';
@@ -30,6 +31,15 @@ export interface HomeDashboardData {
   totalPot: number | null;
   recentActivity: HomeActivity[];
   isAdmin: boolean;
+  cyclePot: CyclePotProgress | null;
+  payoutReady: boolean;
+}
+
+export interface CyclePotProgress {
+  collectedGross: number;
+  expectedGross: number;
+  paidCount: number;
+  totalCount: number;
 }
 
 function pickPrimaryGroup(groups: AjoGroup[], preferredId?: string): AjoGroup | null {
@@ -125,6 +135,8 @@ export async function fetchHomeDashboard(
     totalPot: null,
     recentActivity: [],
     isAdmin: false,
+    cyclePot: null,
+    payoutReady: false,
   };
 
   if (!primaryGroup) return empty;
@@ -157,19 +169,45 @@ export async function fetchHomeDashboard(
       .from('contributions')
       .select('*')
       .eq('cycle_id', currentCycle.id)
-      .order('created_at');
+      .order('user_id')
+      .order('installment_number');
     contributions = (data ?? []) as Contribution[];
   }
 
   const paidCount = contributions.filter((c) => c.status === 'paid').length;
-  const userContribution = contributions.find((c) => c.user_id === userId);
-  const userPending = contributions.find((c) => c.user_id === userId && c.status === 'pending');
-  const userContributionStatus: 'pending' | 'paid' | null =
-    userContribution?.status === 'paid'
-      ? 'paid'
-      : userContribution?.status === 'pending'
-        ? 'pending'
-        : null;
+  const totalCount = contributions.length;
+  const payInsPerCycle = primaryGroup.pay_ins_per_cycle ?? 1;
+  const expectedGross =
+    totalCount > 0
+      ? contributions.reduce((sum, c) => sum + c.amount, 0)
+      : cycleGrossPool(primaryGroup.contribution_amount, memberCount, payInsPerCycle);
+  const collectedGross = contributions
+    .filter((c) => c.status === 'paid')
+    .reduce((sum, c) => sum + c.amount, 0);
+
+  const cyclePot: CyclePotProgress | null =
+    primaryGroup.status === 'active' && totalCount > 0
+      ? { collectedGross, expectedGross, paidCount, totalCount }
+      : null;
+
+  const payoutReady =
+    primaryGroup.status === 'active' &&
+    !!currentCycle &&
+    currentCycle.status !== 'paid_out' &&
+    totalCount > 0 &&
+    paidCount >= totalCount;
+  const userPending = contributions
+    .filter((c) => c.user_id === userId && c.status === 'pending')
+    .sort((a, b) => (a.installment_number ?? 1) - (b.installment_number ?? 1))[0];
+  const userPaidAll =
+    contributions.filter((c) => c.user_id === userId).length > 0 &&
+    contributions.filter((c) => c.user_id === userId).every((c) => c.status === 'paid');
+  const userHasPending = contributions.some((c) => c.user_id === userId && c.status === 'pending');
+  const userContributionStatus: 'pending' | 'paid' | null = userPaidAll
+    ? 'paid'
+    : userHasPending
+      ? 'pending'
+      : null;
   const adminPendingCount = isAdmin
     ? contributions.filter((c) => c.status === 'pending').length
     : 0;
@@ -187,6 +225,7 @@ export async function fetchHomeDashboard(
           adminFeePercent: primaryGroup.admin_fee_percent ?? 0,
           recipientId: currentCycle.recipient_id,
           adminId: primaryGroup.admin_id,
+          payInsPerCycle,
         })
       : null;
 
@@ -247,6 +286,8 @@ export async function fetchHomeDashboard(
     totalPot,
     recentActivity,
     isAdmin,
+    cyclePot,
+    payoutReady,
   };
 }
 
@@ -261,4 +302,9 @@ export function nextPayoutRecipientName(
   const name = profile?.full_name?.trim();
   if (name) return name;
   return null;
+}
+
+/** Show home payout card only after every member has paid for the current cycle. */
+export function shouldShowNextPayoutOnHome(data: HomeDashboardData): boolean {
+  return data.payoutReady;
 }

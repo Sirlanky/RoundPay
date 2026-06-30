@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { MyMoneySummaryCard } from '@/components/MyMoneySummaryCard';
@@ -8,7 +8,6 @@ import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminMode } from '@/contexts/AdminModeContext';
-import { promptProfileSetupForTransfer } from '@/lib/prompt-profile-setup';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { formatDay, formatDayAndTime, formatNaira } from '@/lib/format';
 import {
@@ -26,6 +25,8 @@ export default function ContributionsScreen() {
   const { loading: adminLoading } = useAdminMode();
   const { t } = useTranslation();
   const router = useRouter();
+  const params = useLocalSearchParams<{ groupId?: string }>();
+  const filterGroupId = typeof params.groupId === 'string' ? params.groupId : undefined;
   const { colors, scheme, radius } = useThemeTokens();
 
   const [rows, setRows] = useState<UserContributionRow[]>([]);
@@ -85,26 +86,23 @@ export default function ContributionsScreen() {
     setRefreshing(false);
   };
 
-  const openRow = (row: UserContributionRow) => {
-    if (row.status === 'pending') {
-      if (!promptProfileSetupForTransfer(profile, router, t)) return;
-      router.push(`/group/${row.groupId}/pay?contributionId=${row.id}`);
-      return;
-    }
-    router.push(`/group/${row.groupId}`);
-  };
-
   const filteredRows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
     return rows.filter((row) => {
+      if (filterGroupId && row.groupId !== filterGroupId) return false;
+      if (!q) return true;
       if (row.groupName.toLowerCase().includes(q)) return true;
       if (`cycle ${row.cycleNumber}`.includes(q) || String(row.cycleNumber).includes(q)) return true;
       if (row.status.includes(q)) return true;
       if (formatNaira(row.amount).toLowerCase().includes(q)) return true;
       return false;
     });
-  }, [rows, query]);
+  }, [rows, query, filterGroupId]);
+
+  const filterGroupName = useMemo(
+    () => (filterGroupId ? rows.find((r) => r.groupId === filterGroupId)?.groupName : undefined),
+    [rows, filterGroupId]
+  );
 
   const searchActive = searchOpen || query.trim().length > 0;
 
@@ -141,6 +139,12 @@ export default function ContributionsScreen() {
             style={styles.controlBtn}
           />
         </Card>
+      ) : null}
+
+      {filterGroupName ? (
+        <Text variant="bodyMedium" color="secondary" style={styles.filterTitle}>
+          {t('contributions.filteredTitle', { group: filterGroupName })}
+        </Text>
       ) : null}
 
       {moneySummary ? (
@@ -202,38 +206,28 @@ export default function ContributionsScreen() {
       ) : (
         <View style={styles.list}>
           {filteredRows.map((row) => (
-            <Pressable
-              key={row.id}
-              onPress={() => openRow(row)}
-              style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}>
-              <Card variant="elevated" style={styles.rowCard}>
-                <View style={styles.rowTop}>
-                  <View style={styles.rowMain}>
-                    <Text variant="bodyLarge" style={{ fontWeight: '600' }}>
-                      {row.groupName}
-                    </Text>
-                    <Text variant="caption" color="secondary">
-                      {accountName} · Cycle {row.cycleNumber}
-                      {row.dueDate ? ` · Due ${formatDay(row.dueDate)}` : ''}
-                    </Text>
-                  </View>
-                  <StatusBadge status={row.status} />
-                </View>
-                <View style={styles.rowBottom}>
-                  <Text variant="headingSmall">{formatNaira(row.amount)}</Text>
+            <Card key={row.id} variant="elevated" style={styles.rowCard}>
+              <View style={styles.rowTop}>
+                <View style={styles.rowMain}>
+                  <Text variant="bodyLarge" style={{ fontWeight: '600' }}>
+                    {row.groupName}
+                  </Text>
                   <Text variant="caption" color="secondary">
-                    {row.status === 'paid' && row.paid_at
-                      ? `Paid ${formatDayAndTime(row.paid_at)}`
-                      : `Created ${formatDayAndTime(row.created_at)}`}
+                    {accountName} · Cycle {row.cycleNumber}
+                    {row.dueDate ? ` · Due ${formatDay(row.dueDate)}` : ''}
                   </Text>
                 </View>
-                {row.status === 'pending' ? (
-                  <Text variant="caption" color="accent" style={styles.actionHint}>
-                    {t('contributions.tapToPay')}
-                  </Text>
-                ) : null}
-              </Card>
-            </Pressable>
+                <StatusBadge status={row.status} />
+              </View>
+              <View style={styles.rowBottom}>
+                <Text variant="headingSmall">{formatNaira(row.amount)}</Text>
+                <Text variant="caption" color="secondary">
+                  {row.status === 'paid' && row.paid_at
+                    ? `Paid ${formatDayAndTime(row.paid_at)}`
+                    : `Created ${formatDayAndTime(row.created_at)}`}
+                </Text>
+              </View>
+            </Card>
           ))}
         </View>
       )}
@@ -271,6 +265,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   search: { marginBottom: spacing.md },
+  filterTitle: { marginBottom: spacing.md, lineHeight: 20 },
   error: { marginBottom: spacing.md, lineHeight: 20 },
   list: { gap: spacing.xs },
   rowCard: { marginBottom: spacing.sm },
@@ -282,5 +277,4 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: spacing.sm,
   },
-  actionHint: { fontWeight: '600', marginTop: spacing.sm },
 });

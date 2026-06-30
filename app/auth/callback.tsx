@@ -29,6 +29,10 @@ export default function AuthCallbackScreen() {
       const result = await createSessionFromUrl(url);
       if (cancelled) return;
       if (result.ok) {
+        if (result.recovery) {
+          router.replace('/(auth)/reset-password');
+          return;
+        }
         router.replace('/(tabs)');
         return;
       }

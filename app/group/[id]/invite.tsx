@@ -51,7 +51,6 @@ export default function InviteMembersScreen() {
             memberCount={members.length}
             maxMembers={group.max_members}
             isAdmin={!!isAdmin}
-            adminParticipates={members.some((m) => m.user_id === user?.id)}
           />
         </>
       ) : (

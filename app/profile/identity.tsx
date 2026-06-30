@@ -1,8 +1,11 @@
 import { useCallback, useLayoutEffect, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
+import { IdentityStepProgress } from '@/components/IdentityStepProgress';
+import { IdentityVerifiedRow } from '@/components/IdentityVerifiedRow';
 import { Badge, Button, Card, Text } from '@/components/ui';
 import { OtpVerificationCard } from '@/components/OtpVerificationCard';
+import { NinVerificationCard } from '@/components/NinVerificationCard';
 import { Screen } from '@/components/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminMode } from '@/contexts/AdminModeContext';
@@ -24,6 +27,7 @@ import {
   isEmailOtpVerified,
   isProfileReadyForIdentityVerification,
   isReadyForOtpIdentityComplete,
+  isYouverifyVerified,
 } from '@/lib/identity-setup';
 import { messageFromGroupError } from '@/lib/group-errors';
 import type { TranslationKey } from '@/lib/i18n/keys';
@@ -56,7 +60,9 @@ export default function IdentityVerificationScreen() {
   const emailVerified = isEmailOtpVerified(profile);
   const readyToComplete = isReadyForOtpIdentityComplete(profile, user?.email);
   const otpVerified = isOtpVerified(profile);
+  const ninVerified = isYouverifyVerified(profile);
   const hasEmail = Boolean(profile?.email?.trim() || user?.email?.trim());
+  const profileStepDone = profileReady && hasEmail;
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: t('profile.identity') });
@@ -107,6 +113,13 @@ export default function IdentityVerificationScreen() {
     ]);
   };
 
+  const handleNinVerified = () =>
+    void (async () => {
+      await refreshProfile();
+      await refreshAdminAccess();
+      setStatus('verified');
+    })();
+
   const handleQuickVerify = () => {
     if (!user?.id || !canSave || !profileReadyForPlaceholder) return;
 
@@ -142,16 +155,28 @@ export default function IdentityVerificationScreen() {
         <View style={styles.statusRow}>
           <Badge label={t(IDENTITY_STATUS_LABEL_KEYS[status])} variant={statusVariant(status)} />
           {otpVerified ? <Badge label={t('identity.otpBadge')} variant="success" /> : null}
+          {ninVerified ? <Badge label={t('identity.ninBadge')} variant="success" /> : null}
         </View>
         <Text variant="bodySmall" color="secondary" style={styles.hint}>
           {t('identity.hint')}
         </Text>
-        <Text variant="bodySmall" color="secondary" style={styles.hint}>
-          {t('identity.adminRequirementNote')}
-        </Text>
       </Card>
 
-      {!profileReady || !hasEmail ? (
+      {!isVerifiedAdmin(profile) ? (
+        <IdentityStepProgress
+          profileDone={profileStepDone}
+          phoneDone={phoneVerified}
+          emailDone={emailVerified}
+          ninDone={ninVerified}
+        />
+      ) : null}
+
+      {profileStepDone ? (
+        <IdentityVerifiedRow
+          label={t('identity.step1Title')}
+          detail={[profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.full_name || undefined}
+        />
+      ) : (
         <Card variant="standard" style={styles.card}>
           <Text variant="bodyMedium" style={styles.sectionTitle}>
             {t('identity.step1Title')}
@@ -178,28 +203,40 @@ export default function IdentityVerificationScreen() {
             style={styles.editBtn}
           />
         </Card>
-      ) : null}
+      )}
 
-      {profileReady && hasEmail ? (
+      {profileStepDone ? (
         <>
-          <OtpVerificationCard
-            channel="phone"
-            title={t('otp.phoneTitle')}
-            subtitle={t('otp.phoneSubtitle', { phone: profile?.phone ?? '' })}
-            verified={phoneVerified}
-            verifiedLabel={t('otp.phoneVerified')}
-            onVerified={() => void refreshProfile()}
-          />
-          <OtpVerificationCard
-            channel="email"
-            title={t('otp.emailTitle')}
-            subtitle={t('otp.emailSubtitle', {
-              email: profile?.email ?? user?.email ?? '',
-            })}
-            verified={emailVerified}
-            verifiedLabel={t('otp.emailVerified')}
-            onVerified={() => void refreshProfile()}
-          />
+          {phoneVerified ? (
+            <IdentityVerifiedRow label={t('otp.phoneVerified')} detail={profile?.phone ?? undefined} />
+          ) : (
+            <OtpVerificationCard
+              channel="phone"
+              title={t('otp.phoneTitle')}
+              subtitle={t('otp.phoneSubtitle', { phone: profile?.phone ?? '' })}
+              verified={false}
+              verifiedLabel={t('otp.phoneVerified')}
+              onVerified={() => void refreshProfile()}
+            />
+          )}
+
+          {emailVerified ? (
+            <IdentityVerifiedRow
+              label={t('otp.emailVerified')}
+              detail={profile?.email ?? user?.email ?? undefined}
+            />
+          ) : (
+            <OtpVerificationCard
+              channel="email"
+              title={t('otp.emailTitle')}
+              subtitle={t('otp.emailSubtitle', {
+                email: profile?.email ?? user?.email ?? '',
+              })}
+              verified={false}
+              verifiedLabel={t('otp.emailVerified')}
+              onVerified={() => void refreshProfile()}
+            />
+          )}
         </>
       ) : null}
 
@@ -222,12 +259,26 @@ export default function IdentityVerificationScreen() {
       ) : null}
 
       {readyToComplete && !isVerifiedAdmin(profile) ? (
-        <Button title={t('identity.completeButton')} onPress={handleComplete} loading={submitting} />
+        <NinVerificationCard onVerified={handleNinVerified} />
+      ) : null}
+
+      {PLACEHOLDER_IDENTITY_ENABLED && readyToComplete && !isVerifiedAdmin(profile) ? (
+        <Button
+          title={t('identity.completeButtonOtpOnly')}
+          onPress={handleComplete}
+          loading={submitting}
+          variant="secondary"
+          style={styles.otpOnlyBtn}
+        />
       ) : null}
 
       {isVerifiedAdmin(profile) ? (
         <Text variant="bodySmall" color="secondary" style={styles.reviewNote}>
-          {otpVerified ? t('identity.verifiedOtpNote') : t('identity.verifiedNote')}
+          {ninVerified
+            ? t('identity.verifiedYouverifyNote')
+            : otpVerified
+              ? t('identity.verifiedOtpNote')
+              : t('identity.verifiedNote')}
         </Text>
       ) : null}
     </Screen>
@@ -236,13 +287,14 @@ export default function IdentityVerificationScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xl },
-  statusCard: { marginBottom: spacing.md },
+  statusCard: { marginBottom: spacing.sm },
   statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.sm },
-  hint: { lineHeight: 20, marginTop: spacing.xs },
+  hint: { lineHeight: 20 },
   card: { marginBottom: spacing.sm },
   sectionTitle: { fontWeight: '700', marginBottom: spacing.xs },
   sectionBody: { lineHeight: 20 },
   missingWrap: { marginTop: spacing.sm, gap: spacing.xs },
   editBtn: { marginTop: spacing.sm, marginBottom: 0 },
+  otpOnlyBtn: { marginTop: spacing.xs },
   reviewNote: { marginTop: spacing.md, lineHeight: 20, textAlign: 'center' },
 });

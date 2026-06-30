@@ -143,3 +143,32 @@ export async function fetchGroupHistory(groupId: string): Promise<GroupHistorySu
 
   return { cycles: cyclesOut, totalPaidOut, totalFees, completedCycles };
 }
+
+export interface GroupCollectionTotals {
+  collected: number;
+  outstanding: number;
+}
+
+/** Sum of paid vs pending contribution amounts across every cycle in the group. */
+export async function fetchGroupCollectionTotals(groupId: string): Promise<GroupCollectionTotals> {
+  const { data: cycles, error: cycleErr } = await supabase.from('cycles').select('id').eq('group_id', groupId);
+  if (cycleErr) throw cycleErr;
+
+  const cycleIds = (cycles ?? []).map((c) => (c as { id: string }).id);
+  if (!cycleIds.length) return { collected: 0, outstanding: 0 };
+
+  const { data, error } = await supabase
+    .from('contributions')
+    .select('amount, status')
+    .in('cycle_id', cycleIds);
+  if (error) throw error;
+
+  let collected = 0;
+  let outstanding = 0;
+  for (const row of data ?? []) {
+    const r = row as { amount: number; status: string };
+    if (r.status === 'paid') collected += r.amount;
+    else if (r.status === 'pending') outstanding += r.amount;
+  }
+  return { collected, outstanding };
+}

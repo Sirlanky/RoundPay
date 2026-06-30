@@ -6,6 +6,7 @@ import { AdminKpiGrid } from '@/components/admin/AdminKpiGrid';
 import { GroupHealthBadge } from '@/components/admin/GroupHealthBadge';
 import { CyclePaymentsPanel } from '@/components/CyclePaymentsPanel';
 import { CycleProgress } from '@/components/CycleProgress';
+import { RecordPaymentMethodSheet } from '@/components/group/RecordPaymentMethodSheet';
 import { Screen } from '@/components/Screen';
 import { Button, Card, StatusBadge, Text } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +17,7 @@ import type { GroupHealth } from '@/lib/admin/admin-dashboard';
 import { isGroupAdmin } from '@/lib/admin/role';
 import { recordContributionPayment } from '@/lib/contributions';
 import { formatNaira } from '@/lib/format';
+import type { PaymentMethod } from '@/lib/payment-methods';
 import { fetchGroupHistory } from '@/lib/group-history';
 import { messageFromGroupError } from '@/lib/group-errors';
 import { advanceCycle } from '@/lib/groups';
@@ -69,6 +71,11 @@ export default function GroupAdminScreen() {
   const { contributions, paidCount, refetch: refetchContributions } = useContributions(currentCycle?.id);
   const [actionLoading, setActionLoading] = useState(false);
   const [recordingId, setRecordingId] = useState<string | null>(null);
+  const [recordTarget, setRecordTarget] = useState<{
+    id: string;
+    name: string;
+    amount: number;
+  } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [feesEarned, setFeesEarned] = useState<number | null>(null);
 
@@ -136,26 +143,25 @@ export default function GroupAdminScreen() {
     const contribution = contributions.find((c) => c.id === contributionId);
     const member = contribution ? memberByUserId.get(contribution.user_id) : null;
     const name = member ? memberDisplayName(member) : 'Member';
-    Alert.alert(
-      'Record payment?',
-      `Mark ${name}'s ${contribution ? formatNaira(contribution.amount) : ''} contribution as paid?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Record paid',
-          onPress: async () => {
-            setRecordingId(contributionId);
-            try {
-              await recordContributionPayment(contributionId);
-              await Promise.all([refetch(), refetchContributions()]);
-            } catch (e) {
-              Alert.alert('Could not record', messageFromGroupError(e));
-            }
-            setRecordingId(null);
-          },
-        },
-      ]
-    );
+    if (!contribution) return;
+    setRecordTarget({ id: contributionId, name, amount: contribution.amount });
+  };
+
+  const confirmRecordPayment = async (method: PaymentMethod, note: string) => {
+    if (!recordTarget) return;
+    setRecordingId(recordTarget.id);
+    try {
+      await recordContributionPayment(recordTarget.id, method, note || undefined);
+      await Promise.all([refetch(), refetchContributions()]);
+      setRecordTarget(null);
+    } catch (e) {
+      Alert.alert('Could not record', messageFromGroupError(e));
+    }
+    setRecordingId(null);
+  };
+
+  const handleMemberMessage = (targetUserId: string) => {
+    router.push(`/messages/${targetUserId}` as Href);
   };
 
   const handlePayout = () => {
@@ -296,6 +302,8 @@ export default function GroupAdminScreen() {
             paidCount={paidCount}
             onPay={(cid) => router.push(`/group/${groupId}/pay?contributionId=${cid}` as Href)}
             onRecordPayment={handleRecordPayment}
+            onMessage={handleMemberMessage}
+            adminUserId={group.admin_id}
             recordingId={recordingId}
           />
         </View>
@@ -306,6 +314,11 @@ export default function GroupAdminScreen() {
           icon="slider.horizontal.3"
           label={t('admin.manageGroup')}
           onPress={() => router.push(`/group/${groupId}` as Href)}
+        />
+        <AdminLinkRow
+          icon="clock.arrow.circlepath"
+          label={t('group.viewHistory')}
+          onPress={() => router.push(`/group/${groupId}/history` as Href)}
         />
         <AdminLinkRow
           icon="list.bullet.rectangle"
@@ -329,6 +342,17 @@ export default function GroupAdminScreen() {
           isLast
         />
       </Card>
+
+      {recordTarget ? (
+        <RecordPaymentMethodSheet
+          visible
+          memberName={recordTarget.name}
+          amountLabel={formatNaira(recordTarget.amount)}
+          saving={!!recordingId}
+          onConfirm={confirmRecordPayment}
+          onClose={() => setRecordTarget(null)}
+        />
+      ) : null}
     </Screen>
   );
 }

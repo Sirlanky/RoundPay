@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, Platform, StyleSheet, Text } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { AuthShell } from '@/components/AuthShell';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { messageFromAuthError } from '@/lib/auth-errors';
 import {
+  type EmailAuthMode,
   resendEmailSignIn,
   resolveSignInEmail,
   verifyEmailSignIn,
@@ -19,7 +20,7 @@ const RESEND_COOLDOWN_SEC = 60;
 const CODE_LENGTH = 6;
 
 export default function VerifyOtpScreen() {
-  const { email: emailParam } = useLocalSearchParams<{ email?: string }>();
+  const { email: emailParam, mode: modeParam } = useLocalSearchParams<{ email?: string; mode?: string }>();
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,6 +31,7 @@ export default function VerifyOtpScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { colors } = useThemeTokens();
+  const authMode: EmailAuthMode = modeParam === 'signup' ? 'signup' : 'login';
 
   useEffect(() => {
     void resolveSignInEmail(typeof emailParam === 'string' ? emailParam : null).then((resolved) => {
@@ -91,7 +93,7 @@ export default function VerifyOtpScreen() {
     if (!email || !isSupabaseConfigured || resendIn > 0) return;
     setResending(true);
     setError('');
-    const { error: authError } = await resendEmailSignIn(email);
+    const { error: authError } = await resendEmailSignIn(email, authMode);
     setResending(false);
     if (authError) {
       setError(messageFromAuthError(authError));
@@ -132,6 +134,21 @@ export default function VerifyOtpScreen() {
         onPress={() => router.replace('/(auth)/login')}
         variant="secondary"
       />
+      {authMode === 'login' ? (
+        <Pressable
+          onPress={() =>
+            router.replace({
+              pathname: '/(auth)/login',
+              params: { mode: 'login', method: 'password' },
+            })
+          }
+          hitSlop={8}
+          style={styles.passwordLink}>
+          <Text style={[styles.backHint, { color: colors.primary, fontWeight: '600' }]}>
+            {t('auth.usePasswordInstead')}
+          </Text>
+        </Pressable>
+      ) : null}
       <Text style={[styles.backHint, { color: colors.textSecondary }]}>{t('auth.wrongEmailHint')}</Text>
     </AuthShell>
   );
@@ -139,4 +156,5 @@ export default function VerifyOtpScreen() {
 
 const styles = StyleSheet.create({
   backHint: { fontSize: 13, textAlign: 'center', marginTop: spacing.md, lineHeight: 18 },
+  passwordLink: { alignItems: 'center', marginTop: spacing.sm },
 });

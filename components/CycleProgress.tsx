@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function CycleProgress({ paidCount, totalCount, cycle, memberCount = totalCount }: Props) {
-  const { tp } = useTranslation();
+  const { t, tp } = useTranslation();
   const { colors, scheme } = useThemeTokens();
   const progress = totalCount > 0 ? paidCount / totalCount : 0;
   const finalRotation = cycle ? isLastCycle(cycle.cycle_number, memberCount) : false;
@@ -23,20 +23,22 @@ export function CycleProgress({ paidCount, totalCount, cycle, memberCount = tota
     <Card>
       <View style={styles.titleRow}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>
-          {cycle ? cyclePositionLabel(cycle.cycle_number, memberCount) : 'Current cycle'}
+          {cycle ? cyclePositionLabel(cycle.cycle_number, memberCount) : t('cycle.currentRound')}
         </Text>
         {finalRotation ? (
           <View style={[styles.finalBadge, { backgroundColor: primaryAlpha(scheme, 12) }]}>
-            <Text style={[styles.finalBadgeText, { color: colors.primary }]}>Final rotation</Text>
+            <Text style={[styles.finalBadgeText, { color: colors.primary }]}>{t('cycle.finalTurn')}</Text>
           </View>
         ) : null}
       </View>
       {cycle ? (
         <>
           <Text style={[styles.recipient, { color: colors.textSecondary }]}>
-            Collector: {cycle.recipient?.full_name ?? 'Member'}
+            {t('cycle.collectorLine', { name: cycle.recipient?.full_name ?? t('messages.memberFallback') })}
           </Text>
-          <Text style={[styles.due, { color: colors.textSecondary }]}>Due {formatDate(cycle.due_date)}</Text>
+          <Text style={[styles.due, { color: colors.textSecondary }]}>
+            {t('cycle.dueLine', { date: formatDate(cycle.due_date) })}
+          </Text>
           <View style={[styles.barBg, { backgroundColor: colors.border }]}>
             <View style={[styles.barFill, { width: `${Math.min(progress * 100, 100)}%`, backgroundColor: colors.primary }]} />
           </View>
@@ -48,7 +50,7 @@ export function CycleProgress({ paidCount, totalCount, cycle, memberCount = tota
           </Text>
         </>
       ) : (
-        <Text style={{ color: colors.textSecondary }}>No active cycle yet</Text>
+        <Text style={{ color: colors.textSecondary }}>{t('cycle.noActiveRound')}</Text>
       )}
     </Card>
   );
